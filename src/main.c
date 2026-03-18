@@ -19,6 +19,10 @@ void collect_input(char **input, size_t *size) {
   }
 }
 
+const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type"};
+const int BUILTIN_COMMANDS_LENGTH =
+    sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);
+
 int main(int argc, char *argv[]) {
   // Flush after every printf
   setbuf(stdout, NULL);
@@ -34,10 +38,28 @@ int main(int argc, char *argv[]) {
       if (strlen(input) > 5) {
         printf("%s", input + 5);
       }
-      printf("\n");
+    } else if (strncmp(input, "type", 4) == 0) {
+      if (strlen(input) > 5) {
+        const char *command_match = NULL;
+        for (int i = 0; i < BUILTIN_COMMANDS_LENGTH; i++) {
+          const char *command = BUILTIN_COMMANDS[i];
+          if (strcmp(command, input + 5) == 0) {
+            command_match = command;
+            break;
+          }
+        }
+        if (command_match == NULL) {
+          printf("%s: not found", input + 5);
+        } else {
+          printf("%s is a shell builtin", command_match);
+        }
+      } else {
+        printf(": not found");
+      }
     } else {
-      printf("%s: command not found\n", input);
+      printf("%s: command not found", input);
     }
+    printf("\n");
   }
 
   free(input);
