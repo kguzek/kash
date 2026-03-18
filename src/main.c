@@ -1,10 +1,11 @@
 // Copyright 2026 Konrad Guzek
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void prompt(char **input, size_t *size) {
+void collect_input(char **input, size_t *size) {
   *size = 0;
 
   printf("$ ");
@@ -16,8 +17,6 @@ void prompt(char **input, size_t *size) {
   if (len > 0 && (*input)[len - 1] == '\n') {
     (*input)[len - 1] = '\0';
   }
-
-  printf("%s: command not found\n", *input);
 }
 
 int main(int argc, char *argv[]) {
@@ -26,8 +25,12 @@ int main(int argc, char *argv[]) {
 
   char *input = NULL;
   size_t size = 0;
-  while (1) {
-    prompt(&input, &size);
+  while (true) {
+    collect_input(&input, &size);
+    if (strcmp(input, "exit") == 0) {
+      break;
+    }
+    printf("%s: command not found\n", input);
   }
 
   free(input);
