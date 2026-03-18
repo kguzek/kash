@@ -30,7 +30,14 @@ int main(int argc, char *argv[]) {
     if (strcmp(input, "exit") == 0) {
       break;
     }
-    printf("%s: command not found\n", input);
+    if (strncmp(input, "echo", 4) == 0) {
+      if (strlen(input) > 5) {
+        printf("%s", input + 5);
+      }
+      printf("\n");
+    } else {
+      printf("%s: command not found\n", input);
+    }
   }
 
   free(input);
