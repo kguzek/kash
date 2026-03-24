@@ -1,9 +1,11 @@
 // Copyright 2026 Konrad Guzek
 
+#include <dirent.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -24,9 +26,12 @@ size_t collect_input(char **input, size_t *size) {
   return len;
 }
 
-const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd"};
+const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd", "cd"};
 const int BUILTIN_COMMANDS_LENGTH =
     sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);
+
+static char CWD[MAX_SIZE];
+static char command_buf[MAX_SIZE];
 
 char *get_full_path(const char *command) {
   char *path = getenv("PATH");
@@ -37,8 +42,8 @@ char *get_full_path(const char *command) {
   char *path_copy = strdup(path);
   char *saveptr = NULL;
   char *path_dir = strtok_r(path_copy, ":", &saveptr);
+  char full_path[MAX_SIZE];
   while (path_dir) {
-    char full_path[1024];
     snprintf(full_path, sizeof(full_path), "%s/%s", path_dir, command);
     if (access(full_path, X_OK) == 0) {  // checks if executable
       free(path_copy);
@@ -69,6 +74,11 @@ int split_string(const char *input, char *output[], int max_output_length) {
   }
 
   return output_length;
+}
+
+bool dir_exists(const char *path) {
+  struct stat sb;
+  return stat(path, &sb) == 0 && S_ISDIR(sb.st_mode);
 }
 
 int run_external_program(char *program_name, const char *program_path,
@@ -107,9 +117,12 @@ int run_external_program(char *program_name, const char *program_path,
   return 0;
 }
 
-static char command_buf[MAX_SIZE];
-
-char *pwd() { return getcwd(command_buf, MAX_SIZE); }
+char *pwd() {
+  if (CWD[0] != '\0') {
+    return CWD;
+  }
+  return getcwd(command_buf, MAX_SIZE);
+}
 
 int main(int argc, char *argv[]) {
   // Flush after every printf
@@ -160,6 +173,14 @@ int main(int argc, char *argv[]) {
       }
     } else if (strcmp(first_word, "pwd") == 0) {
       printf("%s", pwd());
+    } else if (strcmp(first_word, "cd") == 0) {
+      // TODO(kguzek): support non-absolute paths
+      if (args[0] == '/' && dir_exists(args)) {
+        snprintf(CWD, sizeof(CWD), "%s", args);
+        continue;
+      } else {
+        printf("cd: %s: No such file or directory", args);
+      }
     } else {
       char *full_path = get_full_path(first_word);
       if (full_path == NULL) {
