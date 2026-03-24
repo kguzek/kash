@@ -24,7 +24,7 @@ size_t collect_input(char **input, size_t *size) {
   return len;
 }
 
-const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type"};
+const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd"};
 const int BUILTIN_COMMANDS_LENGTH =
     sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);
 
