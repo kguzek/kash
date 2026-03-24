@@ -162,7 +162,16 @@ int main(int argc, char *argv[]) {
         free(cwd);
       }
     } else if (strcmp(first_word, "cd") == 0) {
-      if (chdir(args) == 0) {
+      char *chdir_target = args;
+      int result;
+      if (*args == '~') {
+        chdir_target = getenv("HOME");
+        if (chdir_target == NULL) {
+          printf("cd: failed to get home directory\n");
+          continue;
+        }
+      }
+      if (chdir(chdir_target) == 0) {
         continue;
       } else {
         printf("cd: %s: No such file or directory", args);
