@@ -1,6 +1,8 @@
 // Copyright 2026 Konrad Guzek
 
 #include <dirent.h>
+#include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -108,6 +110,74 @@ int run_external_program(char *program_name, const char *program_path,
   return 0;
 }
 
+int builtin_echo(const char *args) {
+  printf("%s\n", args);
+  return 0;
+}
+
+int builtin_type(const char *args) {
+  if (*args == '\0') {
+    fprintf(stderr, ": not found\n");
+    return 2;
+  }
+  const char *command_match = NULL;
+  for (int i = 0; i < BUILTIN_COMMANDS_LENGTH; i++) {
+    const char *command = BUILTIN_COMMANDS[i];
+    if (strcmp(command, args) == 0) {
+      command_match = command;
+      break;
+    }
+  }
+  if (command_match != NULL) {
+    printf("%s is a shell builtin\n", command_match);
+    return 0;
+  }
+  char *full_path = get_full_path(args);
+  if (full_path == NULL) {
+    fprintf(stderr, "%s: not found\n", args);
+    return 1;
+  }
+  printf("%s is %s\n", args, full_path);
+  return 0;
+}
+
+int builtin_pwd(const char *args) {
+  char *cwd = getcwd(NULL, 0);
+  if (cwd == NULL) {
+    perror("pwd");
+    return 1;
+  }
+  printf("%s\n", cwd);
+  free(cwd);
+  return 0;
+}
+
+int builtin_cd(char *args) {
+  char *chdir_target = args;
+  int result;
+  if (*args == '~') {
+    chdir_target = getenv("HOME");
+    if (chdir_target == NULL) {
+      fprintf(stderr, "cd: failed to get home directory\n");
+      return 2;
+    }
+  }
+  if (chdir(chdir_target) != 0) {
+    fprintf(stderr, "cd: %s: %s\n", chdir_target, strerror(errno));
+    return 1;
+  }
+  return 0;
+}
+
+int try_run_external_program(char *first_word, const char *args) {
+  char *full_path = get_full_path(first_word);
+  if (full_path == NULL) {
+    fprintf(stderr, "%s: command not found\n", first_word);
+    return 1;
+  }
+  return run_external_program(first_word, full_path, args);
+}
+
 int main(int argc, char *argv[]) {
   // Flush after every printf
   setbuf(stdout, NULL);
@@ -131,61 +201,16 @@ int main(int argc, char *argv[]) {
     if (strcmp(first_word, "exit") == 0) {
       break;
     } else if (strcmp(first_word, "echo") == 0) {
-      printf("%s", args);
+      builtin_echo(args);
     } else if (strcmp(first_word, "type") == 0) {
-      if (*args != '\0') {
-        const char *command_match = NULL;
-        for (int i = 0; i < BUILTIN_COMMANDS_LENGTH; i++) {
-          const char *command = BUILTIN_COMMANDS[i];
-          if (strcmp(command, args) == 0) {
-            command_match = command;
-            break;
-          }
-        }
-        if (command_match != NULL) {
-          printf("%s is a shell builtin", command_match);
-        } else {
-          char *full_path = get_full_path(args);
-          if (full_path == NULL) {
-            printf("%s: not found", args);
-          } else {
-            printf("%s is %s", args, full_path);
-          }
-        }
-      } else {
-        printf(": not found");
-      }
+      builtin_type(args);
     } else if (strcmp(first_word, "pwd") == 0) {
-      char *cwd = getcwd(NULL, 0);
-      if (cwd != NULL) {
-        printf("%s", cwd);
-        free(cwd);
-      }
+      builtin_pwd(args);
     } else if (strcmp(first_word, "cd") == 0) {
-      char *chdir_target = args;
-      int result;
-      if (*args == '~') {
-        chdir_target = getenv("HOME");
-        if (chdir_target == NULL) {
-          printf("cd: failed to get home directory\n");
-          continue;
-        }
-      }
-      if (chdir(chdir_target) == 0) {
-        continue;
-      } else {
-        printf("cd: %s: No such file or directory", args);
-      }
+      builtin_cd(args);
     } else {
-      char *full_path = get_full_path(first_word);
-      if (full_path == NULL) {
-        printf("%s: command not found", first_word);
-      } else {
-        run_external_program(first_word, full_path, args);
-        continue;
-      }
+      try_run_external_program(first_word, args);
     }
-    printf("\n");
   }
 
   free(input);
