@@ -1,7 +1,6 @@
 // Copyright 2026 Konrad Guzek
 
 #include <dirent.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,9 +28,6 @@ size_t collect_input(char **input, size_t *size) {
 const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd", "cd"};
 const int BUILTIN_COMMANDS_LENGTH =
     sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);
-
-static char CWD[MAX_SIZE];
-static char command_buf[MAX_SIZE];
 
 char *get_full_path(const char *command) {
   char *path = getenv("PATH");
@@ -76,11 +72,6 @@ int split_string(const char *input, char *output[], int max_output_length) {
   return output_length;
 }
 
-bool dir_exists(const char *path) {
-  struct stat sb;
-  return stat(path, &sb) == 0 && S_ISDIR(sb.st_mode);
-}
-
 int run_external_program(char *program_name, const char *program_path,
                          const char *args) {
   char *args_copy = strdup(args);
@@ -115,13 +106,6 @@ int run_external_program(char *program_name, const char *program_path,
     return 2;
   }
   return 0;
-}
-
-char *pwd() {
-  if (CWD[0] != '\0') {
-    return CWD;
-  }
-  return getcwd(command_buf, MAX_SIZE);
 }
 
 int main(int argc, char *argv[]) {
@@ -172,11 +156,13 @@ int main(int argc, char *argv[]) {
         printf(": not found");
       }
     } else if (strcmp(first_word, "pwd") == 0) {
-      printf("%s", pwd());
+      char *cwd = getcwd(NULL, 0);
+      if (cwd != NULL) {
+        printf("%s", cwd);
+        free(cwd);
+      }
     } else if (strcmp(first_word, "cd") == 0) {
-      // TODO(kguzek): support non-absolute paths
-      if (args[0] == '/' && dir_exists(args)) {
-        snprintf(CWD, sizeof(CWD), "%s", args);
+      if (chdir(args) == 0) {
         continue;
       } else {
         printf("cd: %s: No such file or directory", args);
