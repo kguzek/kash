@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define MAX_SIZE 1024
+
 size_t collect_input(char **input, size_t *size) {
   *size = 0;
 
@@ -105,6 +107,10 @@ int run_external_program(char *program_name, const char *program_path,
   return 0;
 }
 
+static char command_buf[MAX_SIZE];
+
+char *pwd() { return getcwd(command_buf, MAX_SIZE); }
+
 int main(int argc, char *argv[]) {
   // Flush after every printf
   setbuf(stdout, NULL);
@@ -152,7 +158,8 @@ int main(int argc, char *argv[]) {
       } else {
         printf(": not found");
       }
-
+    } else if (strcmp(first_word, "pwd") == 0) {
+      printf("%s", pwd());
     } else {
       char *full_path = get_full_path(first_word);
       if (full_path == NULL) {
