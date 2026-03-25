@@ -1,0 +1,29 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+
+      - name: Prepare build system
+        run: cmake -B build -S .
+
+      - name: Compile program
+        run: cmake --build ./build
+
+      - name: Run program
+        run: build/shell <<< 'exit'
