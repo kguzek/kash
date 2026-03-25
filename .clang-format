@@ -1,1 +1,10 @@
 SpacesBeforeTrailingComments: 2
+IncludeCategories:
+  - Regex: "^<.*>"
+    Priority: 1
+    SortPriority: 0
+  - Regex: '^"'
+    Priority: 2
+    SortPriority: 0
+IncludeBlocks: Regroup
+SortIncludes: true
