@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y cmake build-essential
+        run: sudo apt-get update && sudo apt-get install -y cmake build-essential libreadline-dev
 
       - name: Prepare build system
         run: cmake -B build -S .
