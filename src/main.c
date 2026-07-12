@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
       char *fd_input = redirection;
       char fd_number = *(fd_input - 1);
       FILE *output_file = stdout;
+      char *file_mode = "w";
       if (redirection != input) {
         if (fd_number == '1') {
           fd_input--;
@@ -38,6 +39,10 @@ int main(int argc, char *argv[]) {
       *fd_input = '\0';
       input_length = fd_input - input;
       redirection++;
+      if (redirection != NULL && *redirection == '>') {
+        file_mode = "a";
+        redirection++;
+      }
       while (*redirection == ' ') {
         redirection++;
       }
@@ -45,7 +50,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "No file specified for redirection\n");
         continue;
       }
-      freopen(redirection, "w", output_file);
+      freopen(redirection, file_mode, output_file);
     }
     first_word = strtok(input, " ");
     if (first_word == NULL) {
