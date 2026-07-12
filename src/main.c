@@ -24,10 +24,16 @@ int main(int argc, char *argv[]) {
     }
     char *redirection = strstr(input, ">");
     if (redirection != NULL) {
-      char fd_number = *(redirection - 1);
       char *fd_input = redirection;
-      if (fd_number == '1') {
-        fd_input--;
+      char fd_number = *(fd_input - 1);
+      FILE *output_file = stdout;
+      if (redirection != input) {
+        if (fd_number == '1') {
+          fd_input--;
+        } else if (fd_number == '2') {
+          fd_input--;
+          output_file = stderr;
+        }
       }
       *fd_input = '\0';
       input_length = fd_input - input;
@@ -39,7 +45,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "No file specified for redirection\n");
         continue;
       }
-      freopen(redirection, "w", stdout);
+      freopen(redirection, "w", output_file);
     }
     first_word = strtok(input, " ");
     if (first_word == NULL) {
