@@ -19,6 +19,28 @@ int main(int argc, char *argv[]) {
   size_t input_length;
   while (true) {
     input_length = collect_input(&input, &size);
+    if (strncmp(input, "exit", 4) == 0) {
+      break;
+    }
+    char *redirection = strstr(input, ">");
+    if (redirection != NULL) {
+      char fd_number = *(redirection - 1);
+      char *fd_input = redirection;
+      if (fd_number == '1') {
+        fd_input--;
+      }
+      *fd_input = '\0';
+      input_length = fd_input - input;
+      redirection++;
+      while (*redirection == ' ') {
+        redirection++;
+      }
+      if (*redirection == '\0') {
+        fprintf(stderr, "No file specified for redirection\n");
+        continue;
+      }
+      freopen(redirection, "w", stdout);
+    }
     first_word = strtok(input, " ");
     if (first_word == NULL) {
       continue;
@@ -28,9 +50,7 @@ int main(int argc, char *argv[]) {
     if (input_length > first_word_length + 1) {
       args++;
     }
-    if (strcmp(first_word, "exit") == 0) {
-      break;
-    } else if (strcmp(first_word, "echo") == 0) {
+    if (strcmp(first_word, "echo") == 0) {
       builtin_echo(args);
     } else if (strcmp(first_word, "type") == 0) {
       builtin_type(args);
@@ -40,6 +60,9 @@ int main(int argc, char *argv[]) {
       builtin_cd(args);
     } else {
       try_run_external_program(first_word, args);
+    }
+    if (redirection != NULL) {
+      freopen("/dev/tty", "w", stdout);
     }
   }
 
