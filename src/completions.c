@@ -74,7 +74,7 @@ int autocomplete_external_programs() {
 int autocomplete_filenames(const char *args) {
   char *filenames[MAX_PATH_SIZE];
   int nfilenames = 0;
-  int get_result = get_matching_filenames_in_cwd(args, filenames, &nfilenames);
+  int get_result = get_matching_filenames(args, filenames, &nfilenames);
   if (get_result != EXIT_SUCCESS) {
     return get_result;
   }
@@ -89,7 +89,9 @@ static int autocomplete_values(char *values[], int nvalues,
   size_t current_token_length = strlen(current_token);
   if (nvalues == 1) {
     rl_insert_text(values[0] + current_token_length);
-    rl_insert_text(" ");
+    if (values[0][strlen(values[0]) - 1] != '/') {
+      rl_insert_text(" ");
+    }
     free(values[0]);
     if (PREVIOUS_AUTOCOMPLETE_INPUT != NULL) {
       free(PREVIOUS_AUTOCOMPLETE_INPUT);
@@ -117,8 +119,19 @@ static int autocomplete_values(char *values[], int nvalues,
   printf("\n");
   qsort(values, nvalues, sizeof(values[0]), compare_strings);
   for (size_t i = 0; i < nvalues; i++) {
-    printf("%s ", values[i]);
-    free(values[i]);
+    char *value = values[i];
+    size_t last_char_index = strlen(value) - 1;
+    bool is_dir = value[last_char_index] == '/';
+    if (is_dir) {
+      // temporarily remove trailing slash so output includes the directory name
+      value[last_char_index] = '\0';
+    }
+    char *filename = strrchr(value, '/');
+    if (is_dir) {
+      value[last_char_index] = '/';
+    }
+    printf("%s ", filename == NULL ? value : filename + 1);
+    free(value);
   }
   printf("\n$ %s", rl_line_buffer);
   return EXIT_SUCCESS;  // completion list printed
@@ -159,8 +172,8 @@ static int get_external_programs(char *programs[], int *nprograms) {
   return EXIT_SUCCESS;
 }
 
-static int get_matching_filenames_in_cwd(const char *prefix, char **filenames,
-                                         int *nfilenames) {
+static int get_matching_filenames(const char *prefix, char **filenames,
+                                  int *nfilenames) {
   DIR *d;
   struct dirent *dir;
   const char *filename_prefix = strrchr(prefix, '/');
@@ -195,13 +208,19 @@ static int get_matching_filenames_in_cwd(const char *prefix, char **filenames,
           || strncmp(dir->d_name, filename_prefix, strlen(filename_prefix))
                  == 0) {
         char *filename;
+        bool is_dir = dir->d_type == DT_DIR;
+        size_t path_len = strlen(dir->d_name) + (is_dir ? 2 : 1);
         if (is_cwd) {
-          filename = strdup(dir->d_name);
-        } else {
-          size_t path_len = strlen(dir_path) + strlen(dir->d_name) + 2;
           filename = malloc(path_len);
           if (filename) {
-            snprintf(filename, path_len, "%s/%s", dir_path, dir->d_name);
+            snprintf(filename, path_len, is_dir ? "%s/" : "%s", dir->d_name);
+          }
+        } else {
+          path_len += strlen(dir_path) + 1;
+          filename = malloc(path_len);
+          if (filename) {
+            snprintf(filename, path_len, is_dir ? "%s/%s/" : "%s/%s", dir_path,
+                     dir->d_name);
           }
         }
         filenames[(*nfilenames)++] = filename;
