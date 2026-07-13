@@ -8,4 +8,5 @@
 
 set -e # Exit on failure
 
+# - Edit this to change how your program runs remotely
 exec $(dirname "$0")/build/shell "$@"
