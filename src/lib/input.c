@@ -62,6 +62,7 @@ int process_input(char *input) {
 static size_t calculate_argc(const char *input) {
   size_t argc = 0;
   bool in_single_quotes = false;
+  bool in_double_quotes = false;
   bool starting_new_arg = true;
   for (const char *c = input; *c != '\0'; c++) {
     switch (*c) {
@@ -70,12 +71,15 @@ static size_t calculate_argc(const char *input) {
       break;
     default:
       if (starting_new_arg) {
-        if (!in_single_quotes) {
+        if (!in_single_quotes && !in_double_quotes) {
           argc++;
         }
         starting_new_arg = false;
       }
-      if (*c == '\'') {
+      if (*c == '"' && !in_single_quotes) {
+        in_double_quotes = !in_double_quotes;
+      }
+      if (*c == '\'' && !in_double_quotes) {
         in_single_quotes = !in_single_quotes;
       }
       break;
@@ -92,27 +96,38 @@ static const char **allocate_argv(size_t argc, char *input) {
   }
   const char *input_copy = strdup(input);
   bool in_single_quotes = false;
+  bool in_double_quotes = false;
   bool starting_new_arg = true;
   size_t arg_start_idx = 0, arg_idx = 0, input_idx = 0;
   for (const char *c = input_copy; *c != '\0'; c++) {
     switch (*c) {
     case '\'':
+      if (in_double_quotes) {
+        goto copy_char;
+      }
       in_single_quotes = !in_single_quotes;
       break;
-    case ' ':
-      if (!in_single_quotes) {
-        if (starting_new_arg) {
-          break;  // repeated space: no-op
-        }
-        // first unquoted space: copy NULL-terminated arg
-        input[input_idx++] = '\0';
-        starting_new_arg = true;
-        argv[arg_idx++] = input + arg_start_idx;
-        arg_start_idx = input_idx;
-        break;
+    case '"':
+      if (in_single_quotes) {
+        goto copy_char;
       }
-      // passthrough to copy quoted whitespace
+      in_double_quotes = !in_double_quotes;
+      break;
+    case ' ':
+      if (in_single_quotes || in_double_quotes) {
+        goto copy_char;
+      }
+      if (starting_new_arg) {
+        break;  // repeated space: no-op
+      }
+      // first unquoted space: copy NULL-terminated arg
+      input[input_idx++] = '\0';
+      starting_new_arg = true;
+      argv[arg_idx++] = input + arg_start_idx;
+      arg_start_idx = input_idx;
+      break;
     default:
+    copy_char:
       input[input_idx++] = *c;
       starting_new_arg = false;
       break;
