@@ -116,7 +116,9 @@ int try_run_external_program(char *first_word, const char *args) {
   return run_external_program(first_word, full_path, args);
 }
 
-int ring_bell() { return printf("\x07"); }
+int ring_bell() {
+  return printf("\x07");
+}
 
 char *get_longest_common_prefix(char **strings, size_t nstrings) {
   size_t min_length = strlen(strings[0]);

@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 #define MAX_PATH_SIZE 1024
+#define MAX_INPUT_LINE_LENGTH 1024
 
 size_t collect_input(char **input);
 char *get_full_path(const char *command);

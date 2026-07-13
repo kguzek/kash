@@ -12,33 +12,122 @@
 
 char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
 
+/* This is a macro because a function wouldn't allow us to return/halt from
+ * inside the switch statement*/
+#define HANDLE_AUTOCOMPLETE_EXIT(result)                                       \
+  switch (result) {                                                            \
+  case EXIT_SUCCESS:                                                           \
+    return EXIT_SUCCESS;                                                       \
+  case EXIT_FAILURE_EXHAUSTIVE:                                                \
+    ring_bell();                                                               \
+    return EXIT_FAILURE_EXHAUSTIVE;                                            \
+  default:                                                                     \
+    break;                                                                     \
+  }
+
 int autocomplete(int count, int key) {
-  if (autocomplete_builtins() == 0) {
-    return 0;
-  }
-  if (autocomplete_external_programs() == 0) {
-    return 0;
-  }
+  HANDLE_AUTOCOMPLETE_EXIT(autocomplete_builtins());
+  HANDLE_AUTOCOMPLETE_EXIT(autocomplete_external_programs())
+  HANDLE_AUTOCOMPLETE_EXIT(autocomplete_arguments())
   ring_bell();
-  return 1;
+  return EXIT_FAILURE;
+}
+
+int autocomplete_arguments() {
+  char line_buffer_copy[MAX_INPUT_LINE_LENGTH];
+  strncpy(line_buffer_copy, rl_line_buffer, sizeof(line_buffer_copy));
+  char *first_word = strtok(line_buffer_copy, " ");
+  if (first_word == NULL) {
+    return EXIT_FAILURE;
+  }
+  size_t first_word_length = strlen(first_word);
+  char *args = line_buffer_copy + first_word_length + 1;
+  // printf("\na='%d' b='%d' args='%s'\n$ %s",
+  // line_buffer_copy[first_word_length], line_buffer_copy[first_word_length +
+  // 1], args, rl_line_buffer);
+  int result = autocomplete_filenames(args);
+  return result;
 }
 
 int autocomplete_builtins() {
   if (strcmp(rl_line_buffer, "ech") == 0) {
     rl_insert_text("o ");
-    return 0;
+    return EXIT_SUCCESS;
   }
   if (strcmp(rl_line_buffer, "exi") == 0) {
     rl_insert_text("t ");
-    return 0;
+    return EXIT_SUCCESS;
   }
-  return 1;
+  return EXIT_FAILURE;
 }
 
-int get_external_programs(char *programs[], int *nprograms) {
+int autocomplete_external_programs() {
+  char *programs[MAX_PATH_SIZE];
+  int nprograms = 0;
+  int get_result = get_external_programs(programs, &nprograms);
+  if (get_result != EXIT_SUCCESS) {
+    return get_result;
+  }
+  return autocomplete_values(programs, nprograms, rl_line_buffer);
+}
+
+int autocomplete_filenames(const char *args) {
+  char *filenames[MAX_PATH_SIZE];
+  int nfilenames = 0;
+  int get_result = get_matching_filenames_in_cwd(args, filenames, &nfilenames);
+  if (get_result != EXIT_SUCCESS) {
+    return get_result;
+  }
+  return autocomplete_values(filenames, nfilenames, args);
+}
+
+static int autocomplete_values(char *values[], int nvalues,
+                               const char *current_token) {
+  if (nvalues == 0) {
+    return EXIT_FAILURE;  // no matching completions found
+  }
+  size_t current_token_length = strlen(current_token);
+  if (nvalues == 1) {
+    rl_insert_text(values[0] + current_token_length);
+    rl_insert_text(" ");
+    free(values[0]);
+    if (PREVIOUS_AUTOCOMPLETE_INPUT != NULL) {
+      free(PREVIOUS_AUTOCOMPLETE_INPUT);
+      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+    }
+    return EXIT_SUCCESS;  // completed non-ambiguous value
+  }
+  char *prefix = get_longest_common_prefix(values, nvalues);
+  if (prefix != NULL && strcmp(current_token, prefix) != 0) {
+    rl_insert_text(prefix + current_token_length);
+    free(prefix);
+    // inserted partial completion, but list is still ambiguous
+    return EXIT_FAILURE_EXHAUSTIVE;
+  }
+  if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
+    PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+    return EXIT_FAILURE_EXHAUSTIVE;  // completion list is ambiguous
+  }
+  if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
+    free(PREVIOUS_AUTOCOMPLETE_INPUT);
+    PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+    // same as above, but this is not the first completion attempt
+    return EXIT_FAILURE_EXHAUSTIVE;
+  }
+  printf("\n");
+  qsort(values, nvalues, sizeof(values[0]), compare_strings);
+  for (size_t i = 0; i < nvalues; i++) {
+    printf("%s ", values[i]);
+    free(values[i]);
+  }
+  printf("\n$ %s", rl_line_buffer);
+  return EXIT_SUCCESS;  // completion list printed
+}
+
+static int get_external_programs(char *programs[], int *nprograms) {
   char *path = getenv("PATH");
   if (!path) {
-    return 1;
+    return EXIT_FAILURE;
   }
   char *path_copy = strdup(path);
   char *saveptr = NULL;
@@ -67,50 +156,30 @@ int get_external_programs(char *programs[], int *nprograms) {
     path_dir = strtok_r(NULL, ":", &saveptr);
   }
   free(path_copy);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
-int autocomplete_external_programs() {
-  char *programs[MAX_PATH_SIZE];
-  int nprograms = 0;
-  int get_result = get_external_programs(programs, &nprograms);
-  if (get_result != 0) {
-    return get_result;
-  }
-  if (nprograms == 0) {
-    return 1;  // no matching completions found
-  }
-  if (nprograms == 1) {
-    rl_insert_text(programs[0] + strlen(rl_line_buffer));
-    rl_insert_text(" ");
-    free(programs[0]);
-    if (PREVIOUS_AUTOCOMPLETE_INPUT != NULL) {
-      free(PREVIOUS_AUTOCOMPLETE_INPUT);
-      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+static int get_matching_filenames_in_cwd(const char *prefix, char **filenames,
+                                         int *nfilenames) {
+  DIR *d;
+  struct dirent *dir;
+  d = opendir(".");
+  if (d) {
+    while ((dir = readdir(d)) != NULL) {
+      switch (dir->d_type) {
+      case DT_REG:
+      case DT_LNK:
+        break;
+      default:
+        continue;
+      }
+      if (*prefix == '\0'
+          || strncmp(dir->d_name, prefix, strlen(prefix)) == 0) {
+        char *filename = strdup(dir->d_name);
+        filenames[(*nfilenames)++] = filename;
+      }
     }
-    return 0;  // completed non-ambiguous command
   }
-  char *prefix = get_longest_common_prefix(programs, nprograms);
-  if (prefix != NULL && strcmp(rl_line_buffer, prefix) != 0) {
-    rl_insert_text(prefix + strlen(rl_line_buffer));
-    free(prefix);
-    return 3;  // completed partial command, list is still ambiguous
-  }
-  if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
-    PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-    return 2;  // command list is ambiguous
-  }
-  if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
-    free(PREVIOUS_AUTOCOMPLETE_INPUT);
-    PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-    return 2;  // same as above, but this is not the first completion attempt
-  }
-  printf("\n");
-  qsort(programs, nprograms, sizeof(programs[0]), compare_strings);
-  for (size_t i = 0; i < nprograms; i++) {
-    printf("%s ", programs[i]);
-    free(programs[i]);
-  }
-  printf("\n$ %s", rl_line_buffer);
-  return 0;  // completion list printed
+  closedir(d);
+  return EXIT_SUCCESS;
 }

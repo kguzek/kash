@@ -11,3 +11,6 @@ IncludeCategories:
     SortPriority: 3
 IncludeBlocks: Regroup
 SortIncludes: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+BreakBeforeBinaryOperators: NonAssignment
