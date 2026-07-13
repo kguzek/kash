@@ -44,8 +44,6 @@ int autocomplete_arguments() {
     // no arguments to complete
     return EXIT_FAILURE;
   }
-  args++;  // skip space before argument
-  // printf("\nargs='%s'\n$ %s", args, rl_line_buffer);
   int result = autocomplete_filenames(args);
   return result;
 }
@@ -203,8 +201,6 @@ static int get_matching_filenames(const char *prefix, char **filenames,
       if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) {
         continue;
       }
-      // printf("\ndir->d_name='%s' prefix='%s'\n", dir->d_name,
-      // filename_prefix);
       if (*filename_prefix == '\0'
           || strncmp(dir->d_name, filename_prefix, strlen(filename_prefix))
                  == 0) {

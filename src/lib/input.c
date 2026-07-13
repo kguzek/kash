@@ -36,22 +36,22 @@ int process_input(char *input) {
   if (redirection_result != EXIT_SUCCESS) {
     return redirection_result;
   }
-  size_t args_count = calculate_args_count(input);
-  const char **args = allocate_args_array(args_count, input);
-  if (args == NULL) {
+  size_t argc = calculate_argc(input);
+  const char **argv = allocate_argv(argc, input);
+  if (argv == NULL) {
     return EXIT_FAILURE;
   }
-  const char *first_word = args[0];
+  const char *first_word = argv[0];
   if (strcmp(first_word, "echo") == 0) {
-    builtin_echo(args_count, args);
+    builtin_echo(argc, argv);
   } else if (strcmp(first_word, "type") == 0) {
-    builtin_type(args_count, args);
+    builtin_type(argc, argv);
   } else if (strcmp(first_word, "pwd") == 0) {
-    builtin_pwd(args_count, args);
+    builtin_pwd(argc, argv);
   } else if (strcmp(first_word, "cd") == 0) {
-    builtin_cd(args_count, args);
+    builtin_cd(argc, argv);
   } else {
-    try_run_external_program(args_count, args);
+    try_run_external_program(argc, argv);
   }
   if (redirection != NULL) {
     freopen("/dev/tty", "w", stdout);
@@ -59,29 +59,71 @@ int process_input(char *input) {
   return EXIT_SUCCESS;
 }
 
-static size_t calculate_args_count(const char *input) {
-  size_t args_count = 0;
-  char *input_copy = strdup(input);
-  char *saveptr, *token = strtok_r(input_copy, " ", &saveptr);
-  for (args_count = 0; token != NULL; args_count++) {
-    token = strtok_r(NULL, " ", &saveptr);
+static size_t calculate_argc(const char *input) {
+  size_t argc = 0;
+  bool in_single_quotes = false;
+  bool starting_new_arg = true;
+  for (const char *c = input; *c != '\0'; c++) {
+    switch (*c) {
+    case ' ':
+      starting_new_arg = true;
+      break;
+    default:
+      if (starting_new_arg) {
+        if (!in_single_quotes) {
+          argc++;
+        }
+        starting_new_arg = false;
+      }
+      if (*c == '\'') {
+        in_single_quotes = !in_single_quotes;
+      }
+      break;
+    }
   }
-  free(input_copy);
-  return args_count;
+  return argc;
 }
 
-static const char **allocate_args_array(size_t args_count, char *input) {
-  const char **args = malloc(args_count * sizeof(*args));
-  if (args == NULL) {
+static const char **allocate_argv(size_t argc, char *input) {
+  const char **argv = malloc(argc * sizeof(*argv));
+  if (argv == NULL) {
     perror("malloc");
     return NULL;
   }
-  char *saveptr, *token = strtok_r(input, " ", &saveptr);
-  for (size_t arg_idx = 0; token != NULL; arg_idx++) {
-    args[arg_idx] = token;
-    token = strtok_r(NULL, " ", &saveptr);
+  const char *input_copy = strdup(input);
+  bool in_single_quotes = false;
+  bool starting_new_arg = true;
+  size_t arg_start_idx = 0, arg_idx = 0, input_idx = 0;
+  for (const char *c = input_copy; *c != '\0'; c++) {
+    switch (*c) {
+    case '\'':
+      in_single_quotes = !in_single_quotes;
+      break;
+    case ' ':
+      if (!in_single_quotes) {
+        if (starting_new_arg) {
+          break;  // repeated space: no-op
+        }
+        // first unquoted space: copy NULL-terminated arg
+        input[input_idx++] = '\0';
+        starting_new_arg = true;
+        argv[arg_idx++] = input + arg_start_idx;
+        arg_start_idx = input_idx;
+        break;
+      }
+      // passthrough to copy quoted whitespace
+    default:
+      input[input_idx++] = *c;
+      starting_new_arg = false;
+      break;
+    }
   }
-  return args;
+  if (!starting_new_arg) {
+    // ensure final arg is also stored
+    input[input_idx++] = '\0';
+    argv[arg_idx] = input + arg_start_idx;
+  }
+  return argv;
 }
 
 static int handle_redirection(char *input, char *redirection) {

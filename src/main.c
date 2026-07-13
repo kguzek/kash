@@ -11,10 +11,10 @@ int main(int argc, char *argv[]) {
   setbuf(stdout, NULL);
 
   char *input = NULL;
-  collect_input(&input);
+  size_t input_length = collect_input(&input);
   while (input != NULL && strncmp(input, "exit", 4) != 0) {
     process_input(input);
-    collect_input(&input);
+    input_length = collect_input(&input);
   }
 
   free(input);
