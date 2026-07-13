@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/input.h"
+#include "src/lib/input.h"
 
 int main(int argc, char *argv[]) {
   // flush after every printf

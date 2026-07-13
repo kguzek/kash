@@ -1,6 +1,6 @@
 // Copyright 2026 Konrad Guzek
 
-#include "src/input.h"
+#include "src/lib/input.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,8 +8,7 @@
 
 #include "src/builtins.h"
 #include "src/completions.h"
-#include "src/path.h"
-#include "src/utils.h"
+#include "src/lib/path.h"
 
 size_t collect_input(char **input) {
   rl_bind_key('\t', autocomplete);
@@ -80,10 +79,6 @@ static const char **allocate_args_array(size_t args_count, char *input) {
     token = strtok_r(NULL, " ", &saveptr);
   }
   return args;
-}
-
-static int parse_input(char *input, char *output[]) {
-  return split_string(input, output);
 }
 
 static int handle_redirection(char *input, char *redirection) {

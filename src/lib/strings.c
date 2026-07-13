@@ -1,31 +1,9 @@
 // Copyright 2026 Konrad Guzek
 
-#include "src/utils.h"
+#include "src/lib/strings.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-int split_string(char *input, char *output[]) {
-  const char *delimiter = " ";
-
-  int output_length = 0;
-
-  char *saveptr;
-  char *token = strtok_r(input, delimiter, &saveptr);
-  while (token != NULL) {
-    output[output_length++] = token;
-    token = strtok_r(NULL, delimiter, &saveptr);
-  }
-
-  return output_length;
-}
-
-int ring_bell() {
-  return printf("\x07");
-}
 
 char *get_longest_common_prefix(char **strings, size_t nstrings) {
   size_t min_length = strlen(strings[0]);

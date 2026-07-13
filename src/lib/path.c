@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Konrad Guzek
 
-#include "src/path.h"
+#include "src/lib/path.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +31,7 @@ char *get_full_path(const char *command) {
   return NULL;
 }
 
-int try_run_external_program(const int argc, const char **argv) {
+int try_run_external_program(const size_t argc, const char **argv) {
   char *full_path = get_full_path(argv[0]);
   if (full_path == NULL) {
     fprintf(stderr, "%s: command not found\n", argv[0]);
@@ -40,7 +40,7 @@ int try_run_external_program(const int argc, const char **argv) {
   return run_external_program(argc, argv, full_path);
 }
 
-static int run_external_program(const int argc, const char **argv,
+static int run_external_program(const size_t argc, const char **argv,
                                 const char *program_path) {
   int argv_copy_length = argc + 1;  // +1 for NULL terminator
   char **argv_copy = malloc(argv_copy_length * sizeof(*argv_copy));

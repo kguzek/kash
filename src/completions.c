@@ -5,12 +5,13 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 #include <readline/readline.h>
 
-#include "src/path.h"
-#include "src/utils.h"
+#include "src/lib/path.h"
+#include "src/lib/strings.h"
+#include "src/lib/terminal.h"
 
 char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
 

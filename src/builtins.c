@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "src/path.h"
+#include "src/lib/path.h"
 
 static const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd", "cd"};
 static const int BUILTIN_COMMANDS_LENGTH =
