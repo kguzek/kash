@@ -6,7 +6,10 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 
-#include "src/builtins.h"
+#include "src/builtins/cd.h"
+#include "src/builtins/echo.h"
+#include "src/builtins/pwd.h"
+#include "src/builtins/type.h"
 #include "src/completions.h"
 #include "src/lib/path.h"
 

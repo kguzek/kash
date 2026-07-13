@@ -1,28 +1,16 @@
-// Copyright 2026 Konrad Guzek
+// Copyright (c) 2026 Konrad Guzek
 
-#include "src/builtins.h"
+#include "src/builtins/type.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "src/lib/path.h"
 
 static const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd", "cd"};
 static const int BUILTIN_COMMANDS_LENGTH =
     sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);
-
-int builtin_echo(const size_t argc, const char **argv) {
-  if (argc > 1) {
-    printf("%s", argv[1]);
-    for (size_t i = 2; i < argc; i++) {
-      printf(" %s", argv[i]);
-    }
-  }
-  printf("\n");
-  return EXIT_SUCCESS;
-}
 
 int builtin_type(const size_t argc, const char **argv) {
   if (argc < 2) {
@@ -38,40 +26,6 @@ int builtin_type(const size_t argc, const char **argv) {
     }
   }
   return exit_code;
-}
-
-int builtin_pwd(const size_t argc, const char **argv) {
-  char *cwd = getcwd(NULL, 0);
-  if (cwd == NULL) {
-    perror(argv[0]);
-    return EXIT_FAILURE;
-  }
-  printf("%s\n", cwd);
-  free(cwd);
-  return EXIT_SUCCESS;
-}
-
-int builtin_cd(const size_t argc, const char **argv) {
-  if (argc > 2) {
-    fprintf(stderr, "%s: too many arguments\n", argv[0]);
-    return EXIT_FAILURE;
-  }
-  const char *chdir_target;
-  if (argc == 2) {
-    chdir_target = argv[1];
-  }
-  if (argc < 2 || strcmp(chdir_target, "~") == 0) {
-    chdir_target = getenv("HOME");
-    if (chdir_target == NULL) {
-      fprintf(stderr, "%s: failed to get home directory\n", argv[0]);
-      return 2;
-    }
-  }
-  if (chdir(chdir_target) != 0) {
-    perror(argv[0]);
-    return EXIT_FAILURE;
-  }
-  return EXIT_SUCCESS;
 }
 
 static int get_command_type(const char *input_command) {
