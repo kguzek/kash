@@ -36,7 +36,7 @@ int autocomplete(int count, int key) {
   return EXIT_FAILURE;
 }
 
-int autocomplete_arguments() {
+static int autocomplete_arguments() {
   char line_buffer_copy[MAX_INPUT_LINE_LENGTH];
   strncpy(line_buffer_copy, rl_line_buffer, sizeof(line_buffer_copy));
   char *args = strrchr(line_buffer_copy, ' ');
@@ -44,11 +44,11 @@ int autocomplete_arguments() {
     // no arguments to complete
     return EXIT_FAILURE;
   }
-  int result = autocomplete_filenames(args);
+  int result = autocomplete_filenames(args + 1);  // remove leading space
   return result;
 }
 
-int autocomplete_builtins() {
+static int autocomplete_builtins() {
   if (strcmp(rl_line_buffer, "ech") == 0) {
     rl_insert_text("o ");
     return EXIT_SUCCESS;
@@ -60,7 +60,7 @@ int autocomplete_builtins() {
   return EXIT_FAILURE;
 }
 
-int autocomplete_external_programs() {
+static int autocomplete_external_programs() {
   char *programs[MAX_PATH_SIZE];
   int nprograms = 0;
   int get_result = get_external_programs(programs, &nprograms);
@@ -70,7 +70,7 @@ int autocomplete_external_programs() {
   return autocomplete_values(programs, nprograms, rl_line_buffer);
 }
 
-int autocomplete_filenames(const char *args) {
+static int autocomplete_filenames(const char *args) {
   char *filenames[MAX_PATH_SIZE];
   int nfilenames = 0;
   int get_result = get_matching_filenames(args, filenames, &nfilenames);

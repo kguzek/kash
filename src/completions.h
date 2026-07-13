@@ -9,10 +9,10 @@
 #define MAX_INPUT_LINE_LENGTH 1024
 
 int autocomplete(int count, int key);
-int autocomplete_builtins();
-int autocomplete_external_programs();
-int autocomplete_arguments();
-int autocomplete_filenames(const char *args);
+static int autocomplete_builtins();
+static int autocomplete_external_programs();
+static int autocomplete_arguments();
+static int autocomplete_filenames(const char *args);
 
 static int autocomplete_values(char *values[], int nvalues,
                                const char *current_token);
