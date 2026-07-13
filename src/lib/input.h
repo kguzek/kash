@@ -7,7 +7,7 @@
 
 int process_input(char *input);
 size_t collect_input(char **input);
-static size_t calculate_argc(const char *input);
+static int calculate_argc(const char *input);
 static const char **allocate_argv(size_t args_count, char *input);
 static int handle_redirection(char *input, char *redirection);
 

@@ -13,6 +13,8 @@
 #include "src/completions.h"
 #include "src/lib/path.h"
 
+static const char *PROGRAM_NAME = "kash";
+
 size_t collect_input(char **input) {
   rl_bind_key('\t', autocomplete);
   char *result = readline("$ ");
@@ -36,7 +38,13 @@ int process_input(char *input) {
   if (redirection_result != EXIT_SUCCESS) {
     return redirection_result;
   }
-  size_t argc = calculate_argc(input);
+  int argc = calculate_argc(input);
+  if (argc == 0) {
+    return EXIT_SUCCESS;
+  }
+  if (argc < 0) {
+    return EXIT_FAILURE;
+  }
   const char **argv = allocate_argv(argc, input);
   if (argv == NULL) {
     return EXIT_FAILURE;
@@ -59,7 +67,7 @@ int process_input(char *input) {
   return EXIT_SUCCESS;
 }
 
-static size_t calculate_argc(const char *input) {
+static int calculate_argc(const char *input) {
   size_t argc = 0;
   bool starting_new_arg = true;
   bool in_single_quotes = false;
@@ -100,6 +108,14 @@ static size_t calculate_argc(const char *input) {
       next_char_escaped = false;
       break;
     }
+  }
+  if (in_single_quotes) {
+    fprintf(stderr, "%s: unmatched '\n", PROGRAM_NAME);
+    return -1;
+  }
+  if (in_double_quotes) {
+    fprintf(stderr, "%s: unmatched \"\n", PROGRAM_NAME);
+    return -1;
   }
   return argc;
 }
