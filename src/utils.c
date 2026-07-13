@@ -117,3 +117,5 @@ int try_run_external_program(char *first_word, const char *args) {
   }
   return run_external_program(first_word, full_path, args);
 }
+
+int ring_bell() { return printf("\x07"); }
