@@ -163,19 +163,47 @@ static int get_matching_filenames_in_cwd(const char *prefix, char **filenames,
                                          int *nfilenames) {
   DIR *d;
   struct dirent *dir;
-  d = opendir(".");
+  const char *filename_prefix = strrchr(prefix, '/');
+  char *dir_path;
+  bool is_cwd;
+  if (filename_prefix == NULL) {
+    dir_path = ".";
+    is_cwd = true;
+    filename_prefix = prefix;
+  } else {
+    dir_path = strndup(prefix, filename_prefix - prefix);
+    is_cwd = false;
+    filename_prefix++;
+  }
+  d = opendir(dir_path);
   if (d) {
     while ((dir = readdir(d)) != NULL) {
       switch (dir->d_type) {
       case DT_REG:
       case DT_LNK:
+      case DT_DIR:
         break;
       default:
         continue;
       }
-      if (*prefix == '\0'
-          || strncmp(dir->d_name, prefix, strlen(prefix)) == 0) {
-        char *filename = strdup(dir->d_name);
+      if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) {
+        continue;
+      }
+      // printf("\ndir->d_name='%s' prefix='%s'\n", dir->d_name,
+      // filename_prefix);
+      if (*filename_prefix == '\0'
+          || strncmp(dir->d_name, filename_prefix, strlen(filename_prefix))
+                 == 0) {
+        char *filename;
+        if (is_cwd) {
+          filename = strdup(dir->d_name);
+        } else {
+          size_t path_len = strlen(dir_path) + strlen(dir->d_name) + 2;
+          filename = malloc(path_len);
+          if (filename) {
+            snprintf(filename, path_len, "%s/%s", dir_path, dir->d_name);
+          }
+        }
         filenames[(*nfilenames)++] = filename;
       }
     }
