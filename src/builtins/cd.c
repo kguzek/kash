@@ -2,6 +2,7 @@
 
 #include "src/builtins/cd.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +25,8 @@ int builtin_cd(const size_t argc, const char **argv) {
     }
   }
   if (chdir(chdir_target) != 0) {
-    perror(argv[0]);
+    // can't use perror: tests require also printing the directory name
+    fprintf(stderr, "%s: %s: %s\n", argv[0], chdir_target, strerror(errno));
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
