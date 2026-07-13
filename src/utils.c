@@ -11,8 +11,6 @@
 
 #include "src/completions.h"
 
-#define MAX_SIZE 1024
-
 size_t collect_input(char **input) {
   rl_bind_key('\t', autocomplete);
   char *result = readline("$ ");
@@ -39,7 +37,7 @@ char *get_full_path(const char *command) {
   char *path_copy = strdup(path);
   char *saveptr = NULL;
   char *path_dir = strtok_r(path_copy, ":", &saveptr);
-  char full_path[MAX_SIZE];
+  char full_path[MAX_PATH_SIZE];
   while (path_dir) {
     snprintf(full_path, sizeof(full_path), "%s/%s", path_dir, command);
     if (access(full_path, X_OK) == 0) {  // checks if executable

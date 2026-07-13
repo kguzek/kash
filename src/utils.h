@@ -5,6 +5,8 @@
 
 #include <stddef.h>
 
+#define MAX_PATH_SIZE 1024
+
 size_t collect_input(char **input);
 char *get_full_path(const char *command);
 int split_string(const char *input, char *output[], int max_output_length);
