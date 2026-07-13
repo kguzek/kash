@@ -3,9 +3,13 @@
 #ifndef SRC_BUILTINS_H_
 #define SRC_BUILTINS_H_
 
-int builtin_echo(const char *args);
-int builtin_type(const char *args);
-int builtin_pwd(const char *args);
-int builtin_cd(char *args);
+#include <stddef.h>
+
+int builtin_echo(const size_t argc, const char **argv);
+int builtin_type(const size_t argc, const char **argv);
+int builtin_pwd(const size_t argc, const char **argv);
+int builtin_cd(const size_t argc, const char **argv);
+
+static int get_command_type(const char *input_command);
 
 #endif  // SRC_BUILTINS_H_

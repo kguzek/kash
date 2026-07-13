@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 #define EXIT_FAILURE_EXHAUSTIVE 10
+#define MAX_INPUT_LINE_LENGTH 1024
 
 int autocomplete(int count, int key);
 int autocomplete_builtins();

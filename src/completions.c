@@ -9,6 +9,7 @@
 #include <string.h>
 #include <readline/readline.h>
 
+#include "src/path.h"
 #include "src/utils.h"
 
 char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
