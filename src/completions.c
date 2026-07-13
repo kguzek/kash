@@ -10,6 +10,8 @@
 
 #include "src/utils.h"
 
+char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
+
 int autocomplete(int count, int key) {
   if (autocomplete_builtins() == 0) {
     return 0;
@@ -79,13 +81,26 @@ int autocomplete_external_programs() {
     rl_insert_text(programs[0] + strlen(rl_line_buffer));
     rl_insert_text(" ");
     free(programs[0]);
-  } else {
-    printf("\n");
-    for (int i = 0; i < nprograms; i++) {
-      printf("%s ", programs[i]);
-      free(programs[i]);
+    if (PREVIOUS_AUTOCOMPLETE_INPUT != NULL) {
+      free(PREVIOUS_AUTOCOMPLETE_INPUT);
+      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
     }
-    printf("\n$ %s", rl_line_buffer);
+  } else {
+    if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
+      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+      ring_bell();
+    } else if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
+      free(PREVIOUS_AUTOCOMPLETE_INPUT);
+      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+      ring_bell();
+    } else {
+      printf("\n");
+      for (int i = 0; i < nprograms; i++) {
+        printf("%s ", programs[i]);
+        free(programs[i]);
+      }
+      printf("\n$ %s", rl_line_buffer);
+    }
   }
   return 1;
 }
