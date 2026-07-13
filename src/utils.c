@@ -143,3 +143,7 @@ char *get_longest_common_prefix(char **strings, size_t nstrings) {
   prefix[min_length] = '\0';
   return prefix;
 }
+
+int compare_strings(const void *lhs, const void *rhs) {
+  return strcmp(*(const char **)lhs, *(const char **)rhs);
+}

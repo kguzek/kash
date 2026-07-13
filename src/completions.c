@@ -103,6 +103,7 @@ int autocomplete_external_programs() {
     return 1;
   }
   printf("\n");
+  qsort(programs, nprograms, sizeof(programs[0]), compare_strings);
   for (size_t i = 0; i < nprograms; i++) {
     printf("%s ", programs[i]);
     free(programs[i]);
