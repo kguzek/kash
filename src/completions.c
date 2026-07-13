@@ -33,12 +33,11 @@ int autocomplete_builtins() {
   return 1;
 }
 
-int autocomplete_external_programs() {
+int get_external_programs(char *programs[], int *nprograms) {
   char *path = getenv("PATH");
   if (!path) {
     return 1;
   }
-
   char *path_copy = strdup(path);
   char *saveptr = NULL;
   char *path_dir = strtok_r(path_copy, ":", &saveptr);
@@ -57,11 +56,8 @@ int autocomplete_external_programs() {
           continue;
         }
         if (strncmp(dir->d_name, rl_line_buffer, strlen(rl_line_buffer)) == 0) {
-          rl_insert_text(dir->d_name + strlen(rl_line_buffer));
-          rl_insert_text(" ");
-          closedir(d);
-          free(path_copy);
-          return 0;
+          char *filename = strdup(dir->d_name);
+          programs[(*nprograms)++] = filename;
         }
       }
     }
@@ -69,5 +65,27 @@ int autocomplete_external_programs() {
     path_dir = strtok_r(NULL, ":", &saveptr);
   }
   free(path_copy);
+  return 0;
+}
+
+int autocomplete_external_programs() {
+  char *programs[MAX_PATH_SIZE];
+  int nprograms = 0;
+  int get_result = get_external_programs(programs, &nprograms);
+  if (get_result != 0) {
+    return get_result;
+  }
+  if (nprograms == 1) {
+    rl_insert_text(programs[0] + strlen(rl_line_buffer));
+    rl_insert_text(" ");
+    free(programs[0]);
+  } else {
+    printf("\n");
+    for (int i = 0; i < nprograms; i++) {
+      printf("%s ", programs[i]);
+      free(programs[i]);
+    }
+    printf("\n$ %s", rl_line_buffer);
+  }
   return 1;
 }
