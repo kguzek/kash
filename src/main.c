@@ -15,11 +15,10 @@ int main(int argc, char *argv[]) {
   char *input = NULL;
   char *first_word;
   char *args;
-  size_t size = 0;
   size_t input_length;
   while (true) {
-    input_length = collect_input(&input, &size);
-    if (strncmp(input, "exit", 4) == 0) {
+    input_length = collect_input(&input);
+    if (input == NULL || strncmp(input, "exit", 4) == 0) {
       break;
     }
     char *redirection = strstr(input, ">");

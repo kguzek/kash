@@ -5,7 +5,7 @@
 
 #include <stddef.h>
 
-size_t collect_input(char **input, size_t *size);
+size_t collect_input(char **input);
 char *get_full_path(const char *command);
 int split_string(const char *input, char *output[], int max_output_length);
 int run_external_program(char *program_name, const char *program_path,

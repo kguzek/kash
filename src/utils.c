@@ -7,15 +7,20 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <readline/readline.h>
+
+#include "src/completions.h"
 
 #define MAX_SIZE 1024
 
-size_t collect_input(char **input, size_t *size) {
-  *size = 0;
-
-  printf("$ ");
-
-  getline(input, size, stdin);
+size_t collect_input(char **input) {
+  rl_bind_key('\t', autocomplete);
+  char *result = readline("$ ");
+  if (result == NULL) {
+    *input = NULL;
+    return 0;
+  }
+  *input = result;
 
   // remove trailing newline
   size_t len = strlen(*input);
