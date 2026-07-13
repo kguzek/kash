@@ -85,22 +85,28 @@ int autocomplete_external_programs() {
       free(PREVIOUS_AUTOCOMPLETE_INPUT);
       PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
     }
-  } else {
-    if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
-      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-      ring_bell();
-    } else if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
-      free(PREVIOUS_AUTOCOMPLETE_INPUT);
-      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-      ring_bell();
-    } else {
-      printf("\n");
-      for (int i = 0; i < nprograms; i++) {
-        printf("%s ", programs[i]);
-        free(programs[i]);
-      }
-      printf("\n$ %s", rl_line_buffer);
-    }
+    return 0;
   }
-  return 1;
+  char *prefix = get_longest_common_prefix(programs, nprograms);
+  if (prefix != NULL && strcmp(rl_line_buffer, prefix) != 0) {
+    rl_insert_text(prefix + strlen(rl_line_buffer));
+    free(prefix);
+    return 1;
+  }
+  if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
+    PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+    return 1;
+  }
+  if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
+    free(PREVIOUS_AUTOCOMPLETE_INPUT);
+    PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+    return 1;
+  }
+  printf("\n");
+  for (size_t i = 0; i < nprograms; i++) {
+    printf("%s ", programs[i]);
+    free(programs[i]);
+  }
+  printf("\n$ %s", rl_line_buffer);
+  return 0;
 }

@@ -14,5 +14,6 @@ int run_external_program(char *program_name, const char *program_path,
                          const char *args);
 int try_run_external_program(char *first_word, const char *args);
 int ring_bell();
+char *get_longest_common_prefix(char **programs, size_t nprograms);
 
 #endif  // SRC_UTILS_H_
