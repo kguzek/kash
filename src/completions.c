@@ -77,6 +77,9 @@ int autocomplete_external_programs() {
   if (get_result != 0) {
     return get_result;
   }
+  if (nprograms == 0) {
+    return 1;  // no matching completions found
+  }
   if (nprograms == 1) {
     rl_insert_text(programs[0] + strlen(rl_line_buffer));
     rl_insert_text(" ");
@@ -85,22 +88,22 @@ int autocomplete_external_programs() {
       free(PREVIOUS_AUTOCOMPLETE_INPUT);
       PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
     }
-    return 0;
+    return 0;  // completed non-ambiguous command
   }
   char *prefix = get_longest_common_prefix(programs, nprograms);
   if (prefix != NULL && strcmp(rl_line_buffer, prefix) != 0) {
     rl_insert_text(prefix + strlen(rl_line_buffer));
     free(prefix);
-    return 1;
+    return 3;  // completed partial command, list is still ambiguous
   }
   if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
     PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-    return 1;
+    return 2;  // command list is ambiguous
   }
   if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
     free(PREVIOUS_AUTOCOMPLETE_INPUT);
     PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-    return 1;
+    return 2;  // same as above, but this is not the first completion attempt
   }
   printf("\n");
   qsort(programs, nprograms, sizeof(programs[0]), compare_strings);
@@ -109,5 +112,5 @@ int autocomplete_external_programs() {
     free(programs[i]);
   }
   printf("\n$ %s", rl_line_buffer);
-  return 0;
+  return 0;  // completion list printed
 }
