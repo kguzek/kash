@@ -61,27 +61,43 @@ int process_input(char *input) {
 
 static size_t calculate_argc(const char *input) {
   size_t argc = 0;
+  bool starting_new_arg = true;
   bool in_single_quotes = false;
   bool in_double_quotes = false;
-  bool starting_new_arg = true;
+  bool next_char_escaped = false;
   for (const char *c = input; *c != '\0'; c++) {
+    const bool char_escaped =
+        next_char_escaped || in_single_quotes || in_double_quotes;
     switch (*c) {
     case ' ':
-      starting_new_arg = true;
-      break;
-    default:
-      if (starting_new_arg) {
-        if (!in_single_quotes && !in_double_quotes) {
-          argc++;
-        }
-        starting_new_arg = false;
+      if (!char_escaped) {
+        starting_new_arg = true;
       }
-      if (*c == '"' && !in_single_quotes) {
+      next_char_escaped = false;
+      break;
+    case '"':
+      if (!in_single_quotes && !next_char_escaped) {
         in_double_quotes = !in_double_quotes;
       }
-      if (*c == '\'' && !in_double_quotes) {
+      goto handle_other_char;
+    case '\'':
+      if (!in_double_quotes && !next_char_escaped) {
         in_single_quotes = !in_single_quotes;
       }
+      goto handle_other_char;
+    case '\\':
+      if (char_escaped) {
+        goto handle_other_char;
+      }
+      next_char_escaped = true;
+      break;
+    default:
+    handle_other_char:
+      if (starting_new_arg) {
+        argc++;
+        starting_new_arg = false;
+      }
+      next_char_escaped = false;
       break;
     }
   }
@@ -95,26 +111,35 @@ static const char **allocate_argv(size_t argc, char *input) {
     return NULL;
   }
   const char *input_copy = strdup(input);
+  bool starting_new_arg = true;
   bool in_single_quotes = false;
   bool in_double_quotes = false;
-  bool starting_new_arg = true;
+  bool next_char_escaped = false;
   size_t arg_start_idx = 0, arg_idx = 0, input_idx = 0;
   for (const char *c = input_copy; *c != '\0'; c++) {
+    const bool char_escaped =
+        next_char_escaped || in_single_quotes || in_double_quotes;
     switch (*c) {
     case '\'':
-      if (in_double_quotes) {
+      if (in_double_quotes || next_char_escaped) {
         goto copy_char;
       }
       in_single_quotes = !in_single_quotes;
       break;
     case '"':
-      if (in_single_quotes) {
+      if (in_single_quotes || next_char_escaped) {
         goto copy_char;
       }
       in_double_quotes = !in_double_quotes;
       break;
+    case '\\':
+      if (char_escaped) {
+        goto copy_char;
+      }
+      next_char_escaped = true;
+      break;
     case ' ':
-      if (in_single_quotes || in_double_quotes) {
+      if (char_escaped) {
         goto copy_char;
       }
       if (starting_new_arg) {
@@ -130,6 +155,7 @@ static const char **allocate_argv(size_t argc, char *input) {
     copy_char:
       input[input_idx++] = *c;
       starting_new_arg = false;
+      next_char_escaped = false;
       break;
     }
   }
