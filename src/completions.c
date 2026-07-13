@@ -36,15 +36,13 @@ int autocomplete(int count, int key) {
 int autocomplete_arguments() {
   char line_buffer_copy[MAX_INPUT_LINE_LENGTH];
   strncpy(line_buffer_copy, rl_line_buffer, sizeof(line_buffer_copy));
-  char *first_word = strtok(line_buffer_copy, " ");
-  if (first_word == NULL) {
+  char *args = strrchr(line_buffer_copy, ' ');
+  if (args == NULL) {
+    // no arguments to complete
     return EXIT_FAILURE;
   }
-  size_t first_word_length = strlen(first_word);
-  char *args = line_buffer_copy + first_word_length + 1;
-  // printf("\na='%d' b='%d' args='%s'\n$ %s",
-  // line_buffer_copy[first_word_length], line_buffer_copy[first_word_length +
-  // 1], args, rl_line_buffer);
+  args++;  // skip space before argument
+  // printf("\nargs='%s'\n$ %s", args, rl_line_buffer);
   int result = autocomplete_filenames(args);
   return result;
 }
