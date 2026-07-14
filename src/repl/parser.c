@@ -43,6 +43,17 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
         next_char_escaped || in_single_quotes || in_double_quotes;
     switch (*c) {
       HANDLE_QUOTES_AND_ESCAPES(handle_other_char);
+    case ';':
+      if (char_escaped) {
+        goto handle_other_char;
+      }
+      if (starting_new_cmd) {
+        fprintf(stderr, "%s: ;: missing command\n", PROGRAM_NAME);
+        return EXIT_FAILURE;
+      }
+      starting_new_cmd = true;
+      starting_new_arg = true;
+      break;
     case '|':
       if (char_escaped) {
         goto handle_other_char;
@@ -90,7 +101,8 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
   return EXIT_SUCCESS;
 }
 
-const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input) {
+const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
+                            bool *cmd_pipes) {
   size_t total_args = 0;
   for (size_t i = 0; i < cmdc; i++) {
     // TODO(kguzek): add +1 if we use NULL terminators in future
@@ -106,6 +118,7 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input) {
   // as pointers to the appropriate command argv's starting index
   const char **argv_storage = (const char **)(cmdv + cmdc);
   for (size_t i = 0; i < cmdc; i++) {
+    cmd_pipes[i] = false;
     cmdv[i] = argv_storage;
     // TODO(kguzek): add +1 if we use NULL terminators in future
     argv_storage += argcv[i];
@@ -124,7 +137,7 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input) {
         next_char_escaped || in_single_quotes || in_double_quotes;
     switch (*c) {
       HANDLE_QUOTES_AND_ESCAPES(copy_char);
-    case '|':
+    case ';':
       if (char_escaped) {
         goto copy_char;
       }
@@ -132,6 +145,17 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input) {
       input[input_idx++] = '\0';
       arg_idx = 0;
       cmd_idx++;
+      starting_new_arg = true;
+      starting_new_cmd = true;
+      break;
+    case '|':
+      if (char_escaped) {
+        goto copy_char;
+      }
+      // NULL-terminate last arg of previous command
+      input[input_idx++] = '\0';
+      arg_idx = 0;
+      cmd_pipes[cmd_idx++] = true;
       starting_new_arg = true;
       starting_new_cmd = true;
       break;

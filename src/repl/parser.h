@@ -8,7 +8,8 @@
 #include "src/lib/vector.h"
 
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argv);
-const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input);
+const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
+                            bool *cmd_pipes);
 int handle_redirection(char *input, char *redirection);
 static const bool is_escapable_in_double_quotes(const char c);
 

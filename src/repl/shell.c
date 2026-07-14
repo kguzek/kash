@@ -45,12 +45,20 @@ static int process_input(char *input) {
     free(argc_vec);
     return EXIT_SUCCESS;
   }
+  bool *cmd_pipes = malloc(cmdc * sizeof(*cmd_pipes));
+  if (cmd_pipes == NULL) {
+    perror("malloc");
+    free(argc_vec);
+    return EXIT_FAILURE;
+  }
   size_t *argcv = argc_vec->value;
-  const char ***cmdv = allocate_cmdv(cmdc, argcv, input);
+  const char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_pipes);
   if (cmdv == NULL) {
+    free(cmd_pipes);
     return EXIT_FAILURE;
   }
   function_result = execute_commands(cmdc, cmdv, argcv);
+  free(cmd_pipes);
   free(argc_vec);
   if (redirection != NULL) {
     reset_output();

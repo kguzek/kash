@@ -158,7 +158,7 @@ static int get_external_programs(char *programs[], int *nprograms) {
         if (access(full_path, X_OK) != 0) {
           continue;
         }
-        if (strncmp(dir->d_name, rl_line_buffer, strlen(rl_line_buffer)) == 0) {
+        if (strcmp(dir->d_name, rl_line_buffer) == 0) {
           char *filename = strdup(dir->d_name);
           programs[(*nprograms)++] = filename;
         }
@@ -202,8 +202,7 @@ static int get_matching_filenames(const char *prefix, char **filenames,
         continue;
       }
       if (*filename_prefix == '\0'
-          || strncmp(dir->d_name, filename_prefix, strlen(filename_prefix))
-                 == 0) {
+          || strcmp(dir->d_name, filename_prefix) == 0) {
         char *filename;
         bool is_dir = dir->d_type == DT_DIR;
         size_t path_len = strlen(dir->d_name) + (is_dir ? 2 : 1);
