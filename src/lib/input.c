@@ -13,6 +13,10 @@
 #include "src/completions.h"
 #include "src/lib/path.h"
 
+#define IS_BACKSLASH_ESCAPED                                                   \
+  in_single_quotes || next_char_escaped                                        \
+      || (in_double_quotes && (!is_escapable_in_double_quotes(*(c + 1))))
+
 static const char *PROGRAM_NAME = "kash";
 
 size_t collect_input(char **input) {
@@ -77,27 +81,29 @@ static int calculate_argc(const char *input) {
     const bool char_escaped =
         next_char_escaped || in_single_quotes || in_double_quotes;
     switch (*c) {
+    case '\\':
+      if (IS_BACKSLASH_ESCAPED) {
+        goto handle_other_char;
+      }
+      next_char_escaped = true;
+      break;
+    case '\'':
+      if (in_double_quotes || next_char_escaped) {
+        goto handle_other_char;
+      }
+      in_single_quotes = !in_single_quotes;
+      break;
+    case '"':
+      if (in_single_quotes || next_char_escaped) {
+        goto handle_other_char;
+      }
+      in_double_quotes = !in_double_quotes;
+      break;
     case ' ':
       if (!char_escaped) {
         starting_new_arg = true;
       }
       next_char_escaped = false;
-      break;
-    case '"':
-      if (!in_single_quotes && !next_char_escaped) {
-        in_double_quotes = !in_double_quotes;
-      }
-      goto handle_other_char;
-    case '\'':
-      if (!in_double_quotes && !next_char_escaped) {
-        in_single_quotes = !in_single_quotes;
-      }
-      goto handle_other_char;
-    case '\\':
-      if (char_escaped) {
-        goto handle_other_char;
-      }
-      next_char_escaped = true;
       break;
     default:
     handle_other_char:
@@ -136,6 +142,12 @@ static const char **allocate_argv(size_t argc, char *input) {
     const bool char_escaped =
         next_char_escaped || in_single_quotes || in_double_quotes;
     switch (*c) {
+    case '\\':
+      if (IS_BACKSLASH_ESCAPED) {
+        goto copy_char;
+      }
+      next_char_escaped = true;
+      break;
     case '\'':
       if (in_double_quotes || next_char_escaped) {
         goto copy_char;
@@ -147,12 +159,6 @@ static const char **allocate_argv(size_t argc, char *input) {
         goto copy_char;
       }
       in_double_quotes = !in_double_quotes;
-      break;
-    case '\\':
-      if (char_escaped) {
-        goto copy_char;
-      }
-      next_char_escaped = true;
       break;
     case ' ':
       if (char_escaped) {
@@ -181,6 +187,10 @@ static const char **allocate_argv(size_t argc, char *input) {
     argv[arg_idx] = input + arg_start_idx;
   }
   return argv;
+}
+
+static const bool is_escapable_in_double_quotes(const char c) {
+  return c == '\\' || c == '"';
 }
 
 static int handle_redirection(char *input, char *redirection) {
