@@ -1,7 +1,7 @@
 // Copyright 2026 Konrad Guzek
 
-#ifndef SRC_COMPLETIONS_H_
-#define SRC_COMPLETIONS_H_
+#ifndef SRC_REPL_COMPLETIONS_H_
+#define SRC_REPL_COMPLETIONS_H_
 
 #include <stddef.h>
 
@@ -24,4 +24,4 @@ static int get_external_programs(char *programs[], int *nprograms);
 static int get_matching_filenames(const char *prefix, char **filenames,
                                   int *nfilenames);
 
-#endif  // SRC_COMPLETIONS_H_
+#endif  // SRC_REPL_COMPLETIONS_H_

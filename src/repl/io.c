@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <readline/readline.h>
 
-#include "src/completions.h"
+#include "src/repl/completions.h"
 
 size_t collect_input(char **input) {
   rl_bind_key('\t', autocomplete);

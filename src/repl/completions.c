@@ -1,6 +1,6 @@
 // Copyright 2026 Konrad Guzek
 
-#include "src/completions.h"
+#include "src/repl/completions.h"
 
 #include <dirent.h>
 #include <stdio.h>
