@@ -6,11 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/lib/config.h"
 #include "src/lib/path.h"
-
-static const char *BUILTIN_COMMANDS[] = {"exit", "echo", "type", "pwd", "cd"};
-static const int BUILTIN_COMMANDS_LENGTH =
-    sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);
 
 int builtin_type(const size_t argc, const char **argv) {
   if (argc < 2) {

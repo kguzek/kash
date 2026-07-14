@@ -1,22 +1,11 @@
 // Copyright 2026 Konrad Guzek
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include "src/lib/input.h"
+#include "src/repl/shell.h"
 
 int main(int argc, char *argv[]) {
   // flush after every printf
   setbuf(stdout, NULL);
-
-  char *input = NULL;
-  size_t input_length = collect_input(&input);
-  while (input != NULL && strncmp(input, "exit", 4) != 0) {
-    process_input(input);
-    input_length = collect_input(&input);
-  }
-
-  free(input);
-  return 0;
+  return loop();
 }

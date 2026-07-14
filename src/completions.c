@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <readline/readline.h>
 
-#include "src/lib/path.h"
+#include "src/lib/config.h"
 #include "src/lib/strings.h"
 #include "src/lib/terminal.h"
 
