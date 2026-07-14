@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/lib/config.h"
+
 #define IS_BACKSLASH_ESCAPED                                                   \
   in_single_quotes || next_char_escaped                                        \
       || (in_double_quotes && (!is_escapable_in_double_quotes(*(c + 1))))
@@ -29,8 +31,6 @@
     }                                                                          \
     in_double_quotes = !in_double_quotes;                                      \
     break;
-
-static const char *PROGRAM_NAME = "kash";
 
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
   bool starting_new_arg = true;

@@ -5,6 +5,5 @@
 
 int loop();
 static int process_input(char *input);
-static int reset_output();
 
 #endif  // SRC_REPL_SHELL_H_

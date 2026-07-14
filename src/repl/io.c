@@ -3,6 +3,7 @@
 #include "src/repl/io.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <readline/readline.h>
 
 #include "src/repl/completions.h"
@@ -22,4 +23,15 @@ size_t collect_input(char **input) {
     (*input)[len - 1] = '\0';
   }
   return len;
+}
+
+int reset_output() {
+  freopen("/dev/tty", "w", stdout);
+  freopen("/dev/tty", "w", stderr);
+  return EXIT_SUCCESS;
+}
+
+int reset_input() {
+  freopen("/dev/tty", "r", stdin);
+  return EXIT_SUCCESS;
 }

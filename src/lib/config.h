@@ -3,6 +3,7 @@
 #ifndef SRC_LIB_CONFIG_H_
 #define SRC_LIB_CONFIG_H_
 
+extern const char *PROGRAM_NAME;
 extern const char *BUILTIN_COMMANDS[];
 extern const int BUILTIN_COMMANDS_LENGTH;
 

@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/lib/config.h"
 #include "src/lib/vector.h"
 #include "src/repl/executor.h"
 #include "src/repl/io.h"
@@ -16,7 +15,8 @@
 int loop() {
   char *input = NULL;
   collect_input(&input);
-  while (input != NULL && process_input(input) != EXIT_FAILURE_EXHAUSTIVE) {
+  while (input != NULL) {
+    process_input(input);
     collect_input(&input);
   }
 
@@ -57,17 +57,11 @@ static int process_input(char *input) {
     free(cmd_pipes);
     return EXIT_FAILURE;
   }
-  function_result = execute_commands(cmdc, cmdv, argcv);
+  function_result = execute_commands(cmdc, cmdv, cmd_pipes, argcv);
   free(cmd_pipes);
   free(argc_vec);
   if (redirection != NULL) {
     reset_output();
   }
   return function_result;
-}
-
-static int reset_output() {
-  freopen("/dev/tty", "w", stdout);
-  freopen("/dev/tty", "w", stderr);
-  return EXIT_SUCCESS;
 }
