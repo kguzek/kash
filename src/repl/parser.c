@@ -75,7 +75,7 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
     handle_other_char:
       if (starting_new_cmd) {
         (*cmdc)++;
-        push_back(argcv, 0);
+        push_back_size_t(argcv, 0);
         starting_new_cmd = false;
       }
       if (starting_new_arg) {

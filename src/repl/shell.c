@@ -32,7 +32,7 @@ static int process_input(char *input) {
   }
   size_t cmdc = 0;
   struct size_t_vec *argc_vec = NULL;
-  int function_result = push_back(&argc_vec, 0);
+  int function_result = push_back_size_t(&argc_vec, 0);
   if (function_result != EXIT_SUCCESS) {
     return function_result;
   }
