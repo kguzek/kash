@@ -62,7 +62,7 @@ static int autocomplete_builtins() {
 
 static int autocomplete_external_programs() {
   char *programs[MAX_PATH_SIZE];
-  int nprograms = 0;
+  size_t nprograms = 0;
   int get_result = get_external_programs(programs, &nprograms);
   if (get_result != EXIT_SUCCESS) {
     return get_result;
@@ -72,8 +72,8 @@ static int autocomplete_external_programs() {
 
 static int autocomplete_filenames(const char *args) {
   char *filenames[MAX_PATH_SIZE];
-  int nfilenames = 0;
-  int get_result = get_matching_filenames(args, filenames, &nfilenames);
+  size_t nfilenames = 0;
+  int get_result = get_matching_filenames(filenames, &nfilenames, args);
   if (get_result != EXIT_SUCCESS) {
     return get_result;
   }
@@ -136,7 +136,7 @@ static int autocomplete_values(char *values[], int nvalues,
   return EXIT_SUCCESS;  // completion list printed
 }
 
-static int get_external_programs(char *programs[], int *nprograms) {
+static int get_external_programs(char *programs[], size_t *nprograms) {
   char *path = getenv("PATH");
   if (!path) {
     return EXIT_FAILURE;
@@ -158,7 +158,7 @@ static int get_external_programs(char *programs[], int *nprograms) {
         if (access(full_path, X_OK) != 0) {
           continue;
         }
-        if (strcmp(dir->d_name, rl_line_buffer) == 0) {
+        if (strncmp(dir->d_name, rl_line_buffer, strlen(rl_line_buffer)) == 0) {
           char *filename = strdup(dir->d_name);
           programs[(*nprograms)++] = filename;
         }
@@ -171,8 +171,8 @@ static int get_external_programs(char *programs[], int *nprograms) {
   return EXIT_SUCCESS;
 }
 
-static int get_matching_filenames(const char *prefix, char **filenames,
-                                  int *nfilenames) {
+static int get_matching_filenames(char **filenames, size_t *nfilenames,
+                                  const char prefix[]) {
   DIR *d;
   struct dirent *dir;
   const char *filename_prefix = strrchr(prefix, '/');
@@ -202,7 +202,8 @@ static int get_matching_filenames(const char *prefix, char **filenames,
         continue;
       }
       if (*filename_prefix == '\0'
-          || strcmp(dir->d_name, filename_prefix) == 0) {
+          || strncmp(dir->d_name, filename_prefix, strlen(filename_prefix))
+                 == 0) {
         char *filename;
         bool is_dir = dir->d_type == DT_DIR;
         size_t path_len = strlen(dir->d_name) + (is_dir ? 2 : 1);

@@ -16,12 +16,12 @@ static int autocomplete_values(char *values[], int nvalues,
 /** Populates `programs` with the names of all executable files in the
  * directories listed in the PATH environment variable, such that their name
  * begins with `rl_line_buffer`. */
-static int get_external_programs(char *programs[], int *nprograms);
+static int get_external_programs(char *programs[], size_t *nprograms);
 /* Populates `filenames` with the names of all regular files, symlinks or
  * directories in the current working directory, such that their name begins
  * with `prefix`. If `prefix` contains a path, then the directory part is used
  * for searching. Otherwise, the current working directory is used. */
-static int get_matching_filenames(const char *prefix, char **filenames,
-                                  int *nfilenames);
+static int get_matching_filenames(char *filenames[], size_t *nfilenames,
+                                  const char *prefix);
 
 #endif  // SRC_REPL_COMPLETIONS_H_
