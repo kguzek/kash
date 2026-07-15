@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "src/builtins/cd.h"
+#include "src/builtins/complete.h"
 #include "src/builtins/echo.h"
 #include "src/builtins/exit.h"
 #include "src/builtins/pwd.h"
@@ -116,6 +117,9 @@ static int execute_command(const size_t argc, const char **argv,
   }
   if (strcmp(first_word, "cd") == 0) {
     return builtin_cd(argc, argv);
+  }
+  if (strcmp(first_word, "complete") == 0) {
+    return builtin_complete(argc, argv);
   }
   return try_run_external_program(argc, argv, pid_ptr);
 }
