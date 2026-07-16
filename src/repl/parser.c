@@ -32,7 +32,8 @@
     in_double_quotes = !in_double_quotes;                                      \
     break;
 
-int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
+int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
+                   bool strict) {
   bool starting_new_arg = true;
   bool starting_new_cmd = true;
   bool in_single_quotes = false;
@@ -48,7 +49,9 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
         goto handle_other_char;
       }
       if (starting_new_cmd) {
-        fprintf(stderr, "%s: ;: missing command\n", PROGRAM_NAME);
+        if (strict) {
+          fprintf(stderr, "%s: ;: missing command\n", PROGRAM_NAME);
+        }
         return EXIT_FAILURE;
       }
       starting_new_cmd = true;
@@ -59,7 +62,9 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
         goto handle_other_char;
       }
       if (starting_new_cmd) {
-        fprintf(stderr, "%s: |: missing pipe source\n", PROGRAM_NAME);
+        if (strict) {
+          fprintf(stderr, "%s: |: missing pipe source\n", PROGRAM_NAME);
+        }
         return EXIT_FAILURE;
       }
       starting_new_cmd = true;
@@ -87,16 +92,22 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv) {
     }
   }
   if ((*cmdc) > 0 && starting_new_cmd) {
-    fprintf(stderr, "%s: |: missing pipe target\n", PROGRAM_NAME);
-    return EXIT_FAILURE;
+    if (strict) {
+      fprintf(stderr, "%s: |: missing pipe target\n", PROGRAM_NAME);
+      return EXIT_FAILURE;
+    } else {
+      (*cmdc)++;
+    }
   }
-  if (in_single_quotes) {
-    fprintf(stderr, "%s: ': unmatched single quote\n", PROGRAM_NAME);
-    return EXIT_FAILURE;
-  }
-  if (in_double_quotes) {
-    fprintf(stderr, "%s: \": unmatched double quote\n", PROGRAM_NAME);
-    return EXIT_FAILURE;
+  if (strict) {
+    if (in_single_quotes) {
+      fprintf(stderr, "%s: ': unmatched single quote\n", PROGRAM_NAME);
+      return EXIT_FAILURE;
+    }
+    if (in_double_quotes) {
+      fprintf(stderr, "%s: \": unmatched double quote\n", PROGRAM_NAME);
+      return EXIT_FAILURE;
+    }
   }
   return EXIT_SUCCESS;
 }

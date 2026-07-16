@@ -16,10 +16,12 @@ struct size_t_vec {
 
 struct string_vec {
   size_t size;
-  const char *value[];
+  char *value[];
 };
 
-int push_back_size_t(struct size_t_vec **vec, size_t value);
-int push_back_string(struct string_vec **vec, const char *value);
+int push_back_size_t(struct size_t_vec **vec_ptr, size_t value);
+int push_back_string(struct string_vec **vec_ptr, char *value);
+size_t size_t_vec_size(const struct size_t_vec *vec);
+size_t string_vec_size(const struct string_vec *vec);
 
 #endif  // SRC_LIB_VECTOR_H_

@@ -5,7 +5,9 @@
 
 #include <stddef.h>
 
-char *get_longest_common_prefix(char **values, size_t nvalues);
+#include "src/lib/vector.h"
+
+char *get_longest_common_prefix(const struct string_vec *strings);
 int compare_strings(const void *lhs, const void *rhs);
 
 #endif  // SRC_LIB_STRINGS_H_
