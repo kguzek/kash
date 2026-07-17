@@ -7,15 +7,14 @@
 #include <string.h>
 
 #include "src/lib/vector.h"
-
-static struct string_vec *registration_cmds;
-static struct string_vec *registration_paths;
+#include "src/repl/completions.h"
 
 int builtin_complete(const size_t argc, const char **argv) {
   const char *program_name = argv[0];
   bool has_args = argc > 1;
   if (!has_args) {
     fprintf(stderr, "%s: missing option\n", program_name);
+    return EXIT_FAILURE;
   }
   const char *option = argv[1];
   if (strcmp(option, "-p") == 0) {
@@ -26,7 +25,8 @@ int builtin_complete(const size_t argc, const char **argv) {
     }
     int current_exit_code, exit_code = EXIT_SUCCESS;
     for (size_t arg_idx = 2; arg_idx < argc; arg_idx++) {
-      current_exit_code = print_registration_spec(program_name, argv[arg_idx]);
+      current_exit_code =
+          print_registratered_spec_paths(program_name, argv[arg_idx]);
       if (current_exit_code != EXIT_SUCCESS) {
         exit_code = current_exit_code;
       }
@@ -39,11 +39,7 @@ int builtin_complete(const size_t argc, const char **argv) {
               program_name, option);
       return EXIT_FAILURE;
     }
-    int exit_code =
-        push_back_string(&registration_paths, argv[2]) != EXIT_SUCCESS;
-    if (exit_code == EXIT_SUCCESS) {
-      exit_code = push_back_string(&registration_cmds, argv[3]);
-    }
+    int exit_code = register_completion_spec(argv[3], argv[2]);
     if (exit_code != EXIT_SUCCESS) {
       fprintf(stderr, "%s: registering completion specification failed\n",
               program_name);
@@ -54,21 +50,17 @@ int builtin_complete(const size_t argc, const char **argv) {
   return EXIT_FAILURE;
 }
 
-static int print_registration_spec(const char *program_name, const char *cmd) {
-  bool found = false;
-  if (registration_cmds != NULL && registration_paths != NULL) {
-    for (size_t i = 0; i < registration_cmds->size; i++) {
-      if (strcmp(registration_cmds->value[i], cmd) != 0) {
-        continue;
-      }
-      printf("%s -C '%s' %s\n", program_name, registration_paths->value[i],
-             cmd);
-      found = true;
-    }
+static int print_registratered_spec_paths(const char *program_name,
+                                          const char *cmd) {
+  struct string_vec *spec_paths = NULL;
+  size_t spec_paths_size =
+      populate_registered_completion_specs(cmd, &spec_paths);
+  if (spec_paths_size == 0) {
+    fprintf(stderr, "%s: %s: no completion specification\n", program_name, cmd);
+    return EXIT_FAILURE;
   }
-  if (found) {
-    return EXIT_SUCCESS;
+  for (size_t i = 0; i < spec_paths_size; i++) {
+    printf("%s -C '%s' %s\n", program_name, spec_paths->value[i], cmd);
   }
-  fprintf(stderr, "%s: %s: no completion specification\n", program_name, cmd);
-  return EXIT_FAILURE;
+  return EXIT_SUCCESS;
 }

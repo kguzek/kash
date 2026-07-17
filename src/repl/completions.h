@@ -8,6 +8,10 @@
 #include "src/lib/vector.h"
 #include "src/repl/parser.h"
 
+int register_completion_spec(const char *cmd, const char *spec_path);
+size_t populate_registered_completion_specs(const char *cmd,
+                                            struct string_vec **specs);
+
 int autocomplete(int count, int key);
 static int populate_command_completions(struct string_vec **completions,
                                         const char *cmd);

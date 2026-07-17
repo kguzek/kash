@@ -134,8 +134,8 @@ static int try_run_external_program(const size_t argc, const char **argv,
   return run_external_program(argc, argv, full_path, pid_ptr);
 }
 
-static int run_external_program(const size_t argc, const char **argv,
-                                const char *program_path, pid_t *pid_ptr) {
+int run_external_program(const size_t argc, const char **argv,
+                         const char *program_path, pid_t *pid_ptr) {
   int argv_copy_length = argc + 1;  // +1 for NULL terminator
   char **argv_copy = malloc(argv_copy_length * sizeof(*argv_copy));
   if (!argv_copy) {

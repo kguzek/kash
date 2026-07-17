@@ -6,6 +6,7 @@
 #include <stddef.h>
 
 int builtin_complete(const size_t argc, const char **argv);
-static int print_registration_spec(const char *program_name, const char *cmd);
+static int print_registratered_spec_paths(const char *program_name,
+                                          const char *cmd);
 
 #endif  // SRC_BUILTINS_COMPLETE_H_

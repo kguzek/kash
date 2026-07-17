@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <readline/readline.h>
 
@@ -13,9 +14,41 @@
 #include "src/lib/strings.h"
 #include "src/lib/terminal.h"
 #include "src/lib/vector.h"
+#include "src/repl/executor.h"
 #include "src/repl/parser.h"
 
-char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
+static char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
+
+static struct string_vec *registration_cmds = NULL;
+static struct string_vec *registration_paths = NULL;
+
+int register_completion_spec(const char *cmd, const char *spec_path) {
+  int exit_code = push_back_string(&registration_paths, spec_path);
+  if (exit_code == EXIT_SUCCESS) {
+    exit_code = push_back_string(&registration_cmds, cmd);
+  }
+  return exit_code;
+}
+
+size_t populate_registered_completion_specs(const char *cmd,
+                                            struct string_vec **specs) {
+  size_t specs_size = string_vec_size(registration_cmds);
+  if (specs_size == 0 || string_vec_size(registration_paths) == 0) {
+    return 0;
+  }
+  size_t registered_specs = 0;
+  const char *spec_cmd, *spec_path;
+  for (size_t i = 0; i < specs_size; i++) {
+    spec_cmd = registration_cmds->value[i];
+    if (strcmp(spec_cmd, cmd) != 0) {
+      continue;
+    }
+    spec_path = registration_paths->value[i];
+    push_back_string(specs, spec_path);
+    registered_specs++;
+  }
+  return registered_specs;
+}
 
 int autocomplete(int count, int key) {
   size_t cmdc;
@@ -113,7 +146,19 @@ static int populate_command_completions(struct string_vec **completions,
 static int populate_argument_completions(struct string_vec **completions,
                                          const size_t argc, const char **argv,
                                          const char *current_token) {
-  // TODO(kguzek): allow context-aware completions, not just filenames
+  struct string_vec *spec_paths = NULL;
+  size_t spec_paths_size =
+      populate_registered_completion_specs(argv[0], &spec_paths);
+  const char *spec_path;
+  pid_t pid;
+  for (size_t i = 0; i < spec_paths_size; i++) {
+    const char *spec_argv[] = {spec_path};
+    run_external_program(1, spec_argv, spec_path, &pid);
+    int status;
+    waitpid(pid, &status, 0);
+    return WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+  }
+  // fallback to filename completions
   return populate_filename_completions(completions, current_token);
 }
 
