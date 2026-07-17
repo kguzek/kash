@@ -12,6 +12,7 @@
 #include "src/lib/config.h"
 #include "src/lib/strings.h"
 #include "src/lib/terminal.h"
+#include "src/lib/vector.h"
 #include "src/repl/parser.h"
 
 char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
@@ -29,8 +30,8 @@ int autocomplete(int count, int key) {
     free(argc_vec);
     return EXIT_FAILURE;
   }
-  // TODO: use ctx_out not NULL
-  int result = calculate_cmdc(input, &cmdc, &argc_vec, NULL);
+  struct cmd_parse_ctx parse_ctx;
+  int result = calculate_cmdc(input, &cmdc, &argc_vec, &parse_ctx);
   if (result != EXIT_SUCCESS) {
     ring_bell();
     free(argc_vec);
@@ -52,25 +53,49 @@ int autocomplete(int count, int key) {
     free(cmd_pipes);
     return EXIT_FAILURE;
   }
+  struct string_vec *completions = NULL;
+  const char *current_token;
 
   if (cmdc == 0) {
-    result = autocomplete_commands("");
+    current_token = "";
+    result = populate_command_completions(&completions, current_token);
   } else {
     // TODO(kguzek): allow completions at any cursor position; assuming last cmd
     size_t cmdi = cmdc - 1;
     const size_t argc = argcv[cmdi];
     const char **argv = cmdv[cmdi];
-    switch (argc) {
-    case 0:
-      result = autocomplete_commands("");
-      break;
-    case 1:
-      result = autocomplete_commands(argv[0]);
-      break;
-    default:
-      result = autocomplete_arguments(argc, argv);
-      break;
+
+    if (argc > 0 && (parse_ctx.starting_new_arg)) {
+      current_token = "";
+      result = populate_argument_completions(&completions, argc, argv,
+                                             current_token);
+    } else {
+      switch (argc) {
+      case 0:
+        current_token = "";
+        result = populate_command_completions(&completions, current_token);
+        break;
+      case 1:
+        current_token = argv[0];
+        result = populate_command_completions(&completions, current_token);
+        break;
+      default:
+        current_token = argv[argc - 1];
+        result = populate_argument_completions(&completions, argc, argv,
+                                               current_token);
+        break;
+      }
     }
+  }
+
+  result = insert_completions(completions, &parse_ctx, current_token);
+
+  size_t completions_size = string_vec_size(completions);
+  if (completions_size > 0) {
+    for (size_t i = 0; i < completions_size; i++) {
+      free(completions->value[i]);
+    }
+    free(completions);
   }
 
   if (result != EXIT_SUCCESS) {
@@ -79,67 +104,34 @@ int autocomplete(int count, int key) {
   return result;
 }
 
-static int autocomplete_commands(const char *cmd) {
-  int result = autocomplete_builtins(cmd);
-  if (result != EXIT_SUCCESS) {
-    result = autocomplete_externals(cmd);
-  }
-  return result;
+static int populate_command_completions(struct string_vec **completions,
+                                        const char *cmd) {
+  populate_builtin_completions(completions, cmd);
+  return populate_external_completions(completions, cmd);
 }
 
-static int autocomplete_arguments(const size_t argc, const char **argv) {
-  size_t argi = argc - 1;
-  return autocomplete_filenames(argv[argi]);
+static int populate_argument_completions(struct string_vec **completions,
+                                         const size_t argc, const char **argv,
+                                         const char *current_token) {
+  // TODO(kguzek): allow context-aware completions, not just filenames
+  return populate_filename_completions(completions, current_token);
 }
 
-static int autocomplete_builtins(const char *cmd) {
-  if (strcmp(cmd, "ech") == 0) {
-    rl_insert_text("o ");
-    return EXIT_SUCCESS;
-  }
-  if (strcmp(cmd, "exi") == 0) {
-    rl_insert_text("t ");
-    return EXIT_SUCCESS;
-  }
-  return EXIT_FAILURE;
-}
-
-static int autocomplete_externals(const char *cmd) {
-  struct string_vec *externals = NULL;
-  int result = get_matching_externals(&externals, cmd);
-  if (result != EXIT_SUCCESS) {
-    return result;
-  }
-  result = insert_completions(externals, cmd);
-  size_t externals_size = string_vec_size(externals);
-  if (externals_size > 0) {
-    for (size_t i = 0; i < externals_size; i++) {
-      free(externals->value[i]);
+static int populate_builtin_completions(struct string_vec **completions,
+                                        const char *cmd) {
+  size_t cmd_length = strlen(cmd);
+  const char *builtin;
+  for (size_t i = 0; i < BUILTIN_COMMANDS_LENGTH; i++) {
+    builtin = BUILTIN_COMMANDS[i];
+    if (strncmp(builtin, cmd, cmd_length) == 0) {
+      push_back_string(completions, strdup(builtin));
     }
-    free(externals);
   }
-  return result;
-}
-
-static int autocomplete_filenames(const char *current_token) {
-  struct string_vec *filenames = NULL;
-  int result = get_matching_filenames(&filenames, current_token);
-  if (result != EXIT_SUCCESS) {
-    return result;
-  }
-  result = insert_completions(filenames, current_token);
-
-  size_t filenames_size = string_vec_size(filenames);
-  if (filenames_size > 0) {
-    for (size_t i = 0; i < filenames_size; i++) {
-      free(filenames->value[i]);
-    }
-    free(filenames);
-  }
-  return result;
+  return EXIT_SUCCESS;
 }
 
 static int insert_completions(struct string_vec *completions,
+                              struct cmd_parse_ctx *parse_ctx,
                               const char *current_token) {
   int completions_size = string_vec_size(completions);
   if (completions_size == 0) {
@@ -150,11 +142,17 @@ static int insert_completions(struct string_vec *completions,
   if (completions_size == 1) {
     rl_insert_text(first_completion + current_token_length);
     if (first_completion[strlen(first_completion) - 1] != '/') {
-      rl_insert_text(" ");
+      if (parse_ctx->in_single_quotes) {
+        rl_insert_text("' ");
+      } else if (parse_ctx->in_double_quotes) {
+        rl_insert_text("\" ");
+      } else {
+        rl_insert_text(" ");
+      }
     }
     if (PREVIOUS_AUTOCOMPLETE_INPUT != NULL) {
       free(PREVIOUS_AUTOCOMPLETE_INPUT);
-      PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
+      PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
     }
     return EXIT_SUCCESS;  // completed non-ambiguous value
   }
@@ -193,14 +191,16 @@ static int insert_completions(struct string_vec *completions,
     if (is_dir) {
       value[last_char_index] = '/';
     }
-    printf("%s ", filename == NULL ? value : filename + 1);
+    const char *hint = filename == NULL ? value : filename + 1;
+    const bool hint_needs_escaping = strchr(hint, ' ') != NULL;
+    printf(hint_needs_escaping ? "'%s' " : "%s ", hint);
   }
   printf("\n$ %s", rl_line_buffer);
   return EXIT_SUCCESS;  // completion list printed
 }
 
-static int get_matching_externals(struct string_vec **externals,
-                                  const char *current_token) {
+static int populate_external_completions(struct string_vec **externals,
+                                         const char *current_token) {
   char *path = getenv("PATH");
   if (!path) {
     return EXIT_FAILURE;
@@ -237,8 +237,8 @@ static int get_matching_externals(struct string_vec **externals,
   return EXIT_SUCCESS;
 }
 
-static int get_matching_filenames(struct string_vec **filenames,
-                                  const char *current_token) {
+static int populate_filename_completions(struct string_vec **filenames,
+                                         const char *current_token) {
   DIR *d;
   struct dirent *dir;
   const char *filename_prefix = strrchr(current_token, '/');
