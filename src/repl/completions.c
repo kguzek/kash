@@ -167,21 +167,28 @@ static int populate_spec_completions(struct string_vec **completions,
       return result;
     }
     // TODO(kguzek): actually populate `completions`
-    char output[8192];
-    ssize_t total = 0;
-
+    char *output = NULL;
+    size_t output_size = 0;
+    size_t max_len = 0;
+    char tmp[4096];
     ssize_t n;
-    while (true) {
-      n = read(pipes[0], output + total, sizeof(output) - total - 1);
-      if (n <= 0) {
-        break;
+    while ((n = read(pipes[0], tmp, sizeof(tmp))) > 0) {
+      if (output_size + n + 1 > max_len) {
+        max_len = (output_size + n + 1) * 2;
+        output = realloc(output, max_len);
       }
-      total += n;
+      memcpy(output + output_size, tmp, n);
+      output_size += n;
     }
     close(pipes[0]);
     dup2(saved_stdin, STDIN_FILENO);
+    size_t last_idx = output_size > 0 && output[output_size - 1] == '\n'
+                          ? output_size - 1
+                          : output_size;
+    output[last_idx] = ' ';
+    output[last_idx + 1] = '\0';
     rl_insert_text(output);
-    rl_insert_text(" ");
+    free(output);
 
     int status;
     waitpid(pid, &status, 0);
