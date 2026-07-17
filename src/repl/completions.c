@@ -51,12 +51,6 @@ int autocomplete(int count, int key) {
     free(cmd_pipes);
     return EXIT_FAILURE;
   }
-  // TODO: remove
-  // printf("\ncmdc=%zu", cmdc);
-  // for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
-  //   printf(" argcv[%zu]=%zu", cmdi, argcv[cmdi]);
-  // }
-  // printf("\n$ %s", rl_line_buffer);
 
   if (cmdc == 0) {
     result = autocomplete_commands("");
@@ -231,7 +225,7 @@ static int get_matching_externals(struct string_vec **externals,
         if (current_token_length == 0
             || strncmp(dir->d_name, current_token, current_token_length) == 0) {
           char *filename = strdup(dir->d_name);
-          push_back_string(externals, filename);
+          push_back_string_unique(externals, filename);
         }
       }
       closedir(d);
@@ -291,7 +285,7 @@ static int get_matching_filenames(struct string_vec **filenames,
                      dir->d_name);
           }
         }
-        push_back_string(filenames, filename);
+        push_back_string_unique(filenames, filename);
       }
     }
   }

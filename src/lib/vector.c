@@ -31,6 +31,26 @@ int push_back_string(struct string_vec **vec_ptr, char *value) {
   PUSH_BACK();
 }
 
+int push_back_string_unique(struct string_vec **vec_ptr, char *value) {
+  size_t size = string_vec_size(*vec_ptr);
+  for (size_t i = 0; i < size; i++) {
+    if (strcmp((*vec_ptr)->value[i], value) == 0) {
+      return EXIT_SUCCESS;
+    }
+  }
+  PUSH_BACK();
+}
+
+int push_back_size_t_unique(struct size_t_vec **vec_ptr, size_t value) {
+  size_t size = size_t_vec_size(*vec_ptr);
+  for (size_t i = 0; i < size; i++) {
+    if ((*vec_ptr)->value[i] == value) {
+      return EXIT_SUCCESS;
+    }
+  }
+  PUSH_BACK();
+}
+
 size_t size_t_vec_size(const struct size_t_vec *vec) {
   return vec == NULL ? 0 : vec->size;
 }
