@@ -2,6 +2,7 @@
 
 #include "src/repl/executor.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -152,7 +153,8 @@ int run_external_program(const size_t argc, const char **argv,
     return EXIT_FAILURE;
   case 0:
     execv(program_path, argv_copy);
-    perror("execv");
+    fprintf(stderr, "%s: '%s': %s", PROGRAM_NAME, program_path,
+            strerror(errno));
     // https://stackoverflow.com/a/2329754
     _Exit(EXIT_FAILURE);
   default:

@@ -152,6 +152,7 @@ static int populate_argument_completions(struct string_vec **completions,
   const char *spec_path;
   pid_t pid;
   for (size_t i = 0; i < spec_paths_size; i++) {
+    spec_path = spec_paths->value[i];
     const char *spec_argv[] = {spec_path};
     run_external_program(1, spec_argv, spec_path, &pid);
     int status;
