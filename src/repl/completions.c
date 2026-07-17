@@ -157,7 +157,13 @@ static int populate_argument_completions(struct string_vec **completions,
     run_external_program(1, spec_argv, spec_path, &pid);
     int status;
     waitpid(pid, &status, 0);
-    return WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+    if (WIFEXITED(status)) {
+      const int exit_code = WEXITSTATUS(status);
+      if (exit_code == EXIT_SUCCESS) {
+        printf(" ");
+      }
+      return exit_code;
+    }
   }
   // fallback to filename completions
   return populate_filename_completions(completions, current_token);
