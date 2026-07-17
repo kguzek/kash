@@ -5,10 +5,6 @@
 
 #include <stddef.h>
 
-struct vector_header {
-  size_t size;
-};
-
 struct size_t_vec {
   size_t size;
   size_t value[];

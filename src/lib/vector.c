@@ -3,12 +3,11 @@
 #include "src/lib/vector.h"
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <readline/readline.h>
 
-#define VEC_SIZE(vec) vec == NULL ? 0 : vec->size;
-
-#define PUSH_BACK                                                              \
-  size_t size = VEC_SIZE((*vec_ptr));                                          \
+#define PUSH_BACK()                                                            \
   size_t new_size = size + 1;                                                  \
   if ((size & new_size) == 0) {                                                \
     size_t new_alloc_size = (size + new_size) * sizeof((*vec_ptr)->value[0]);  \
@@ -23,17 +22,20 @@
   return EXIT_SUCCESS;
 
 int push_back_size_t(struct size_t_vec **vec_ptr, size_t value) {
-  PUSH_BACK;
+  size_t size = size_t_vec_size(*vec_ptr);
+  PUSH_BACK();
 }
 
 int push_back_string(struct string_vec **vec_ptr, char *value) {
-  PUSH_BACK;
+  size_t size = string_vec_size(*vec_ptr);
+  PUSH_BACK();
 }
 
 size_t size_t_vec_size(const struct size_t_vec *vec) {
-  return VEC_SIZE(vec);
+  return vec == NULL ? 0 : vec->size;
 }
 
 size_t string_vec_size(const struct string_vec *vec) {
-  return VEC_SIZE(vec);
+  if (vec != NULL) {}
+  return vec == NULL ? 0 : vec->size;
 }

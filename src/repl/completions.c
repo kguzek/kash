@@ -52,11 +52,11 @@ int autocomplete(int count, int key) {
     return EXIT_FAILURE;
   }
   // TODO: remove
-  printf("\ncmdc=%zu", cmdc);
-  for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
-    printf(" argcv[%zu]=%zu", cmdi, argcv[cmdi]);
-  }
-  printf("\n$ %s", rl_line_buffer);
+  // printf("\ncmdc=%zu", cmdc);
+  // for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
+  //   printf(" argcv[%zu]=%zu", cmdi, argcv[cmdi]);
+  // }
+  // printf("\n$ %s", rl_line_buffer);
 
   if (cmdc == 0) {
     result = autocomplete_commands("");
@@ -110,26 +110,35 @@ static int autocomplete_builtins(const char *cmd) {
 }
 
 static int autocomplete_externals(const char *cmd) {
-  struct string_vec *externals;
+  struct string_vec *externals = NULL;
   int result = get_matching_externals(&externals, cmd);
   if (result != EXIT_SUCCESS) {
     return result;
   }
   result = insert_completions(externals, cmd);
-  if (string_vec_size(externals) > 0) {
+  size_t externals_size = string_vec_size(externals);
+  if (externals_size > 0) {
+    for (size_t i = 0; i < externals_size; i++) {
+      free(externals->value[i]);
+    }
     free(externals);
   }
   return result;
 }
 
 static int autocomplete_filenames(const char *current_token) {
-  struct string_vec *filenames;
+  struct string_vec *filenames = NULL;
   int result = get_matching_filenames(&filenames, current_token);
   if (result != EXIT_SUCCESS) {
     return result;
   }
   result = insert_completions(filenames, current_token);
-  if (string_vec_size(filenames) > 0) {
+
+  size_t filenames_size = string_vec_size(filenames);
+  if (filenames_size > 0) {
+    for (size_t i = 0; i < filenames_size; i++) {
+      free(filenames->value[i]);
+    }
     free(filenames);
   }
   return result;
@@ -137,7 +146,6 @@ static int autocomplete_filenames(const char *current_token) {
 
 static int insert_completions(struct string_vec *completions,
                               const char *current_token) {
-  printf("\nDBG: 1\n$ %s", rl_line_buffer);
   int completions_size = string_vec_size(completions);
   if (completions_size == 0) {
     return EXIT_FAILURE;  // no matching completions found
@@ -145,35 +153,30 @@ static int insert_completions(struct string_vec *completions,
   size_t current_token_length = strlen(current_token);
   char *first_completion = completions->value[0];
   if (completions_size == 1) {
-    printf("\nDBG: 2\n$ %s", rl_line_buffer);
     rl_insert_text(first_completion + current_token_length);
     if (first_completion[strlen(first_completion) - 1] != '/') {
       rl_insert_text(" ");
     }
-    printf("\nDBG: 3\n$ %s", rl_line_buffer);
-    free(first_completion);
     if (PREVIOUS_AUTOCOMPLETE_INPUT != NULL) {
       free(PREVIOUS_AUTOCOMPLETE_INPUT);
       PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
     }
     return EXIT_SUCCESS;  // completed non-ambiguous value
   }
-  printf("\nDBG: 4\n$ %s", rl_line_buffer);
   char *prefix = get_longest_common_prefix(completions);
-  printf("\nDBG: 4.5\n$ %s", rl_line_buffer);
-  if (prefix != NULL && strcmp(current_token, prefix) != 0) {
-    printf("\nDBG: 5\n$ %s", rl_line_buffer);
-    rl_insert_text(prefix + current_token_length);
+  if (prefix != NULL) {
+    if (strcmp(current_token, prefix) != 0) {
+      rl_insert_text(prefix + current_token_length);
+      free(prefix);
+      // inserted partial completion, but list is still ambiguous
+      return EXIT_FAILURE_EXHAUSTIVE;
+    }
     free(prefix);
-    // inserted partial completion, but list is still ambiguous
-    return EXIT_FAILURE_EXHAUSTIVE;
   }
-  printf("\nDBG: 6\n$ %s", rl_line_buffer);
   if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
     PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
     return EXIT_FAILURE_EXHAUSTIVE;  // completion list is ambiguous
   }
-  printf("\nDBG: 7\n$ %s", rl_line_buffer);
   if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
     free(PREVIOUS_AUTOCOMPLETE_INPUT);
     PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
@@ -181,7 +184,6 @@ static int insert_completions(struct string_vec *completions,
     return EXIT_FAILURE_EXHAUSTIVE;
   }
   printf("\n");
-  printf("\nDBG: 8\n$ %s", rl_line_buffer);
   qsort(completions->value, completions_size, sizeof(first_completion),
         compare_strings);
   for (size_t i = 0; i < completions_size; i++) {
@@ -197,7 +199,6 @@ static int insert_completions(struct string_vec *completions,
       value[last_char_index] = '/';
     }
     printf("%s ", filename == NULL ? value : filename + 1);
-    free(value);
   }
   printf("\n$ %s", rl_line_buffer);
   return EXIT_SUCCESS;  // completion list printed
@@ -205,7 +206,6 @@ static int insert_completions(struct string_vec *completions,
 
 static int get_matching_externals(struct string_vec **externals,
                                   const char *current_token) {
-  printf("\nDBG_gme: 0\n$ %s", rl_line_buffer);
   char *path = getenv("PATH");
   if (!path) {
     return EXIT_FAILURE;
@@ -215,7 +215,6 @@ static int get_matching_externals(struct string_vec **externals,
   char *path_dir = strtok_r(path_copy, ":", &saveptr);
   char full_path[MAX_PATH_SIZE];
   size_t current_token_length = strlen(current_token);
-  printf("\nDBG_gme: 1\n$ %s", rl_line_buffer);
   while (path_dir) {
     DIR *d;
     struct dirent *dir;
@@ -232,8 +231,6 @@ static int get_matching_externals(struct string_vec **externals,
         if (current_token_length == 0
             || strncmp(dir->d_name, current_token, current_token_length) == 0) {
           char *filename = strdup(dir->d_name);
-          printf("\nDBG_gme: adding_filename %s\n$ %s", filename,
-                 rl_line_buffer);
           push_back_string(externals, filename);
         }
       }
@@ -241,7 +238,6 @@ static int get_matching_externals(struct string_vec **externals,
     }
     path_dir = strtok_r(NULL, ":", &saveptr);
   }
-  printf("\nDBG_gme: end\n$ %s", rl_line_buffer);
   free(path_copy);
   return EXIT_SUCCESS;
 }
