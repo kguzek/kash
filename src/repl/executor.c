@@ -58,24 +58,24 @@ int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
     argv = cmdv[cmd_idx];
     has_input_pipe = has_output_pipe;
     has_output_pipe = cmd_pipes[cmd_idx];
-    saved_stdin = dup(0);
-    saved_stdout = dup(1);
+    saved_stdin = dup(STDIN_FILENO);
+    saved_stdout = dup(STDOUT_FILENO);
     if (has_input_pipe) {
       // attach previous pipe to the program's stdin
-      dup2(pipes[cmd_idx - 1][0], 0);
+      dup2(pipes[cmd_idx - 1][0], STDIN_FILENO);
     }
     if (has_output_pipe) {
       // attach pipe to the program's stdout
-      dup2(pipes[cmd_idx][1], 1);
+      dup2(pipes[cmd_idx][1], STDOUT_FILENO);
     }
     command_result = execute_command(argc, argv, &pids[cmd_idx]);
     if (has_input_pipe) {
       close(pipes[cmd_idx - 1][0]);
-      dup2(saved_stdin, 0);
+      dup2(saved_stdin, STDIN_FILENO);
     }
     if (has_output_pipe) {
       close(pipes[cmd_idx][1]);
-      dup2(saved_stdout, 1);
+      dup2(saved_stdout, STDOUT_FILENO);
     }
     if (pids[cmd_idx] == BUILTIN_PID_VALUE) {
       // was not fork+exec'd (e.g. builtin)

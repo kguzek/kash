@@ -143,30 +143,70 @@ static int populate_command_completions(struct string_vec **completions,
   return populate_external_completions(completions, cmd);
 }
 
+static int populate_spec_completions(struct string_vec **completions,
+                                     struct string_vec *spec_paths) {
+  size_t spec_paths_size = spec_paths->size;
+  int saved_stdin = dup(STDIN_FILENO), saved_stdout = dup(STDOUT_FILENO);
+  const char *spec_path;
+  for (size_t i = 0; i < spec_paths_size; i++) {
+    pid_t pid;
+    int pipes[2];
+    if (pipe(pipes) == -1) {
+      perror("pipe");
+      return EXIT_FAILURE;
+    }
+    spec_path = spec_paths->value[i];
+    const char *spec_argv[] = {spec_path};
+    dup2(pipes[1], STDOUT_FILENO);
+    int result = run_external_program(1, spec_argv, spec_path, &pid);
+    close(pipes[1]);
+    dup2(saved_stdout, STDOUT_FILENO);
+    if (result != EXIT_SUCCESS) {
+      close(pipes[0]);
+      dup2(saved_stdin, STDIN_FILENO);
+      return result;
+    }
+    // TODO(kguzek): actually populate `completions`
+    char output[8192];
+    ssize_t total = 0;
+
+    ssize_t n;
+    while (true) {
+      n = read(pipes[0], output + total, sizeof(output) - total - 1);
+      if (n <= 0) {
+        break;
+      }
+      total += n;
+    }
+    close(pipes[0]);
+    dup2(saved_stdin, STDIN_FILENO);
+    rl_insert_text(output);
+    rl_insert_text(" ");
+
+    int status;
+    waitpid(pid, &status, 0);
+    if (!WIFEXITED(status)) {
+      return EXIT_FAILURE;
+    }
+    result = WEXITSTATUS(status);
+    return result;
+    return EXIT_SUCCESS;
+  }
+  return EXIT_FAILURE;
+}
+
 static int populate_argument_completions(struct string_vec **completions,
                                          const size_t argc, const char **argv,
                                          const char *current_token) {
   struct string_vec *spec_paths = NULL;
   size_t spec_paths_size =
       populate_registered_completion_specs(argv[0], &spec_paths);
-  const char *spec_path;
-  pid_t pid;
-  for (size_t i = 0; i < spec_paths_size; i++) {
-    spec_path = spec_paths->value[i];
-    const char *spec_argv[] = {spec_path};
-    run_external_program(1, spec_argv, spec_path, &pid);
-    int status;
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status)) {
-      const int exit_code = WEXITSTATUS(status);
-      if (exit_code == EXIT_SUCCESS) {
-        printf(" ");
-      }
-      return exit_code;
-    }
+  if (spec_paths_size == 0) {
+    // fallback to filename completions
+    return populate_filename_completions(completions, current_token);
+  } else {
+    return populate_spec_completions(completions, spec_paths);
   }
-  // fallback to filename completions
-  return populate_filename_completions(completions, current_token);
 }
 
 static int populate_builtin_completions(struct string_vec **completions,
