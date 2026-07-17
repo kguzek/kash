@@ -5,10 +5,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *get_longest_common_prefix(char **strings, size_t nstrings) {
-  size_t min_length = strlen(strings[0]);
-  for (size_t i = 1; i < nstrings; i++) {
-    size_t length = strlen(strings[i]);
+#include "src/lib/vector.h"
+
+char *get_longest_common_prefix(const struct string_vec *strings) {
+  size_t strings_size = string_vec_size(strings);
+  if (strings_size == 0) {
+    return "";
+  }
+  size_t min_length = strlen(strings->value[0]);
+  for (size_t i = 1; i < strings_size; i++) {
+    size_t length = strlen(strings->value[i]);
     if (length < min_length) {
       min_length = length;
     }
@@ -18,9 +24,9 @@ char *get_longest_common_prefix(char **strings, size_t nstrings) {
     return NULL;
   }
   for (size_t i = 0; i < min_length; i++) {
-    char c = strings[0][i];
-    for (size_t j = 1; j < nstrings; j++) {
-      if (strings[j][i] != c) {
+    char c = strings->value[0][i];
+    for (size_t j = 1; j < strings_size; j++) {
+      if (strings->value[j][i] != c) {
         prefix[i] = '\0';
         return prefix;
       }

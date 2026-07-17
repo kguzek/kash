@@ -36,7 +36,7 @@ static int process_input(char *input) {
   if (function_result != EXIT_SUCCESS) {
     return function_result;
   }
-  function_result = calculate_cmdc(input, &cmdc, &argc_vec);
+  function_result = calculate_cmdc(input, &cmdc, &argc_vec, NULL);
   if (function_result != EXIT_SUCCESS) {
     free(argc_vec);
     return function_result;
@@ -54,6 +54,7 @@ static int process_input(char *input) {
   size_t *argcv = argc_vec->value;
   const char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_pipes);
   if (cmdv == NULL) {
+    free(argc_vec);
     free(cmd_pipes);
     return EXIT_FAILURE;
   }
