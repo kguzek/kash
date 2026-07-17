@@ -8,90 +8,89 @@
 
 #include "src/lib/config.h"
 
-#define IS_BACKSLASH_ESCAPED                                                   \
-  in_single_quotes || next_char_escaped                                        \
-      || (in_double_quotes && (!is_escapable_in_double_quotes(*(c + 1))))
+#define IS_BACKSLASH_ESCAPED(ctx)                                              \
+  ctx->in_single_quotes || ctx->next_char_escaped                              \
+      || (ctx->in_double_quotes && (!is_escapable_in_double_quotes(*(c + 1))))
 
-#define HANDLE_QUOTES_AND_ESCAPES(label)                                       \
+#define HANDLE_QUOTES_AND_ESCAPES(ctx, label)                                  \
   case '\\':                                                                   \
-    if (IS_BACKSLASH_ESCAPED) {                                                \
+    if (IS_BACKSLASH_ESCAPED(ctx)) {                                           \
       goto label;                                                              \
     }                                                                          \
-    next_char_escaped = true;                                                  \
+    ctx->next_char_escaped = true;                                             \
     break;                                                                     \
   case '\'':                                                                   \
-    if (in_double_quotes || next_char_escaped) {                               \
+    if (ctx->in_double_quotes || ctx->next_char_escaped) {                     \
       goto label;                                                              \
     }                                                                          \
-    in_single_quotes = !in_single_quotes;                                      \
+    ctx->in_single_quotes = !(ctx->in_single_quotes);                          \
     break;                                                                     \
   case '"':                                                                    \
-    if (in_single_quotes || next_char_escaped) {                               \
+    if (ctx->in_single_quotes || ctx->next_char_escaped) {                     \
       goto label;                                                              \
     }                                                                          \
-    in_double_quotes = !in_double_quotes;                                      \
+    ctx->in_double_quotes = !(ctx->in_double_quotes);                          \
     break;
 
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
-                   bool strict) {
-  bool starting_new_arg = true;
-  bool starting_new_cmd = true;
-  bool in_single_quotes = false;
-  bool in_double_quotes = false;
-  bool next_char_escaped = false;
+                   struct cmd_parse_ctx *ctx_out) {
+  const bool strict = ctx_out == NULL;
+  struct cmd_parse_ctx ctx_local;
+  struct cmd_parse_ctx *ctx = strict ? &ctx_local : ctx_out;
+  initialize_cmd_parse_ctx(ctx);
   for (const char *c = input; *c != '\0'; c++) {
-    const bool char_escaped =
-        next_char_escaped || in_single_quotes || in_double_quotes;
+    const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
+                              || ctx->in_double_quotes;
     switch (*c) {
-      HANDLE_QUOTES_AND_ESCAPES(handle_other_char);
+      HANDLE_QUOTES_AND_ESCAPES(ctx, handle_other_char);
     case ';':
       if (char_escaped) {
         goto handle_other_char;
       }
-      if (starting_new_cmd) {
+      if (ctx->starting_new_cmd) {
         if (strict) {
           fprintf(stderr, "%s: ;: missing command\n", PROGRAM_NAME);
         }
         return EXIT_FAILURE;
       }
-      starting_new_cmd = true;
-      starting_new_arg = true;
+      ctx->starting_new_cmd = true;
+      ctx->starting_new_arg = true;
       break;
     case '|':
       if (char_escaped) {
         goto handle_other_char;
       }
-      if (starting_new_cmd) {
+      if (ctx->starting_new_cmd) {
         if (strict) {
           fprintf(stderr, "%s: |: missing pipe source\n", PROGRAM_NAME);
         }
         return EXIT_FAILURE;
       }
-      starting_new_cmd = true;
-      starting_new_arg = true;
+      ctx->starting_new_cmd = true;
+      ctx->starting_new_arg = true;
       break;
     case ' ':
       if (!char_escaped) {
-        starting_new_arg = true;
+        ctx->starting_new_arg = true;
       }
-      next_char_escaped = false;
+      ctx->next_char_escaped = false;
       break;
     default:
     handle_other_char:
-      if (starting_new_cmd) {
+      if (ctx->starting_new_cmd) {
         (*cmdc)++;
         push_back_size_t(argcv, 0);
-        starting_new_cmd = false;
+        ctx->starting_new_cmd = false;
       }
-      if (starting_new_arg) {
+      if (ctx->starting_new_arg) {
         (*argcv)->value[*cmdc - 1]++;
-        starting_new_arg = false;
+        ctx->starting_new_arg = false;
       }
-      next_char_escaped = false;
+      ctx->next_char_escaped = false;
       break;
     }
   }
-  if ((*cmdc) > 0 && starting_new_cmd) {
+  if ((*cmdc) > 0 && ctx->starting_new_cmd) {
     if (strict) {
       fprintf(stderr, "%s: |: missing pipe target\n", PROGRAM_NAME);
       return EXIT_FAILURE;
@@ -100,11 +99,11 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
     }
   }
   if (strict) {
-    if (in_single_quotes) {
+    if (ctx->in_single_quotes) {
       fprintf(stderr, "%s: ': unmatched single quote\n", PROGRAM_NAME);
       return EXIT_FAILURE;
     }
-    if (in_double_quotes) {
+    if (ctx->in_double_quotes) {
       fprintf(stderr, "%s: \": unmatched double quote\n", PROGRAM_NAME);
       return EXIT_FAILURE;
     }
@@ -138,16 +137,14 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
   const char *input_copy = strdup(input);
   size_t cmd_idx = 0, arg_idx = 0, input_idx = 0;
 
-  bool starting_new_arg = true;
-  bool starting_new_cmd = true;
-  bool in_single_quotes = false;
-  bool in_double_quotes = false;
-  bool next_char_escaped = false;
+  struct cmd_parse_ctx ctx_local;
+  struct cmd_parse_ctx *ctx = &ctx_local;
+  initialize_cmd_parse_ctx(ctx);
   for (const char *c = input_copy; *c != '\0'; c++) {
-    const bool char_escaped =
-        next_char_escaped || in_single_quotes || in_double_quotes;
+    const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
+                              || ctx->in_double_quotes;
     switch (*c) {
-      HANDLE_QUOTES_AND_ESCAPES(copy_char);
+      HANDLE_QUOTES_AND_ESCAPES(ctx, copy_char);
     case ';':
       if (char_escaped) {
         goto copy_char;
@@ -156,8 +153,8 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
       input[input_idx++] = '\0';
       arg_idx = 0;
       cmd_idx++;
-      starting_new_arg = true;
-      starting_new_cmd = true;
+      ctx->starting_new_arg = true;
+      ctx->starting_new_cmd = true;
       break;
     case '|':
       if (char_escaped) {
@@ -167,32 +164,32 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
       input[input_idx++] = '\0';
       arg_idx = 0;
       cmd_pipes[cmd_idx++] = true;
-      starting_new_arg = true;
-      starting_new_cmd = true;
+      ctx->starting_new_arg = true;
+      ctx->starting_new_cmd = true;
       break;
     case ' ':
       if (char_escaped) {
         goto copy_char;
       }
-      if (starting_new_arg) {
+      if (ctx->starting_new_arg) {
         break;  // repeated space: no-op
       }
       // first unquoted space: copy NULL-terminated arg
       input[input_idx++] = '\0';
-      starting_new_arg = true;
+      ctx->starting_new_arg = true;
       break;
     default:
     copy_char:
-      if (starting_new_arg) {
+      if (ctx->starting_new_arg) {
         cmdv[cmd_idx][arg_idx++] = input + input_idx;
-        starting_new_arg = false;
+        ctx->starting_new_arg = false;
       }
       input[input_idx++] = *c;
-      next_char_escaped = false;
+      ctx->next_char_escaped = false;
       break;
     }
   }
-  if (!starting_new_arg) {
+  if (!(ctx->starting_new_arg)) {
     // ensure final arg is also NULL-terminated
     input[input_idx++] = '\0';
   }
@@ -236,6 +233,14 @@ int handle_redirection(char *input, char *redirection) {
   }
   freopen(redirection, file_mode, output_file);
   return EXIT_SUCCESS;
+}
+
+static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx) {
+  ctx->starting_new_arg = true;
+  ctx->starting_new_cmd = true;
+  ctx->in_single_quotes = false;
+  ctx->in_double_quotes = false;
+  ctx->next_char_escaped = false;
 }
 
 static const bool is_escapable_in_double_quotes(const char c) {

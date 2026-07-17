@@ -36,7 +36,7 @@ static int process_input(char *input) {
   if (function_result != EXIT_SUCCESS) {
     return function_result;
   }
-  function_result = calculate_cmdc(input, &cmdc, &argc_vec, true);
+  function_result = calculate_cmdc(input, &cmdc, &argc_vec, NULL);
   if (function_result != EXIT_SUCCESS) {
     free(argc_vec);
     return function_result;

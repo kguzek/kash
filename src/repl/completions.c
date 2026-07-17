@@ -29,7 +29,8 @@ int autocomplete(int count, int key) {
     free(argc_vec);
     return EXIT_FAILURE;
   }
-  int result = calculate_cmdc(input, &cmdc, &argc_vec, false);
+  // TODO: use ctx_out not NULL
+  int result = calculate_cmdc(input, &cmdc, &argc_vec, NULL);
   if (result != EXIT_SUCCESS) {
     ring_bell();
     free(argc_vec);
