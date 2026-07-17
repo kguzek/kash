@@ -358,7 +358,7 @@ static int populate_spec_completions(struct string_vec **completions,
       dup2(saved_stdin, STDIN_FILENO);
       return result;
     }
-    char *output = NULL;
+    char *output = malloc(1);
     size_t output_size = 0;
     size_t max_len = 0;
     char tmp[4096];
