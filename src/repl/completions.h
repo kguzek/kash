@@ -34,6 +34,9 @@ static int insert_completions(struct string_vec *completions,
  * begins with `current_token`. */
 static int populate_external_completions(struct string_vec **externals,
                                          const char *current_token);
+static int populate_spec_completions(struct string_vec **completions,
+                                     struct string_vec *spec_paths,
+                                     const char *current_token);
 /* Populates `filenames` with the names of all regular files, symlinks or
  * directories in the current working directory, such that their name begins
  * with `current_token`. If `current_token` contains a path, then the directory
