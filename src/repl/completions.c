@@ -19,31 +19,26 @@
 
 static char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
 
-static struct string_vec *registration_cmds = NULL;
-static struct string_vec *registration_paths = NULL;
+static struct string_pair_vec registered_completion_specs = {NULL, NULL};
 
 int register_completion_spec(const char *cmd, const char *spec_path) {
-  int exit_code = push_back_string(&registration_paths, spec_path);
-  if (exit_code == EXIT_SUCCESS) {
-    exit_code = push_back_string(&registration_cmds, cmd);
-  }
-  return exit_code;
+  return push_back_string_pair(&registered_completion_specs, cmd, spec_path);
 }
 
 size_t populate_registered_completion_specs(const char *cmd,
                                             struct string_vec **specs) {
-  size_t specs_size = string_vec_size(registration_cmds);
-  if (specs_size == 0 || string_vec_size(registration_paths) == 0) {
+  size_t specs_size = string_pair_vec_size(&registered_completion_specs);
+  if (specs_size == 0) {
     return 0;
   }
   size_t registered_specs = 0;
   const char *spec_cmd, *spec_path;
   for (size_t i = 0; i < specs_size; i++) {
-    spec_cmd = registration_cmds->value[i];
+    spec_cmd = string_pair_vec_key(&registered_completion_specs, i);
     if (strcmp(spec_cmd, cmd) != 0) {
       continue;
     }
-    spec_path = registration_paths->value[i];
+    spec_path = string_pair_vec_value(&registered_completion_specs, i);
     push_back_string(specs, spec_path);
     registered_specs++;
   }
@@ -101,7 +96,7 @@ int autocomplete(int count, int key) {
 
     if (argc > 0 && (parse_ctx.starting_new_arg)) {
       current_token = "";
-      previous_token = argv[cmdc - 1];
+      previous_token = argv[argc - 1];
       result = populate_argument_completions(&completions, cmd, current_token,
                                              previous_token);
     } else {
@@ -126,11 +121,8 @@ int autocomplete(int count, int key) {
 
   result = insert_completions(completions, &parse_ctx, current_token);
 
-  size_t completions_size = string_vec_size(completions);
-  if (completions_size > 0) {
-    for (size_t i = 0; i < completions_size; i++) {
-      free(completions->value[i]);
-    }
+  free_string_vec(completions);
+  if (completions != NULL) {
     free(completions);
   }
 
@@ -356,7 +348,16 @@ static int populate_spec_completions(struct string_vec **completions,
     spec_path = spec_paths->value[i];
     const char *spec_argv[] = {spec_path, cmd, current_token, previous_token};
     dup2(pipes[1], STDOUT_FILENO);
-    int result = run_external_program(4, spec_argv, spec_path, &pid);
+    struct string_pair_vec spec_envs = {NULL, NULL};
+    char comp_point[128];
+    snprintf(comp_point, sizeof(comp_point), "%lu", strlen(rl_line_buffer));
+    push_back_string_pair(&spec_envs, "COMP_POINT", comp_point);
+    push_back_string_pair(&spec_envs, "COMP_LINE", rl_line_buffer);
+    int result =
+        run_external_program(4, spec_argv, spec_path, &pid, &spec_envs);
+    // not freeing because neither keys nor rl_line_buffer are owned by us
+    // comp_point lives on the stack I think so it should also not be freed??
+    // free_string_pair_vec(&spec_envs);
     close(pipes[1]);
     dup2(saved_stdout, STDOUT_FILENO);
     if (result != EXIT_SUCCESS) {

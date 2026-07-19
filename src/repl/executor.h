@@ -6,10 +6,13 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "src/lib/vector.h"
+
 int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
                      const size_t argcv[]);
 int run_external_program(const size_t argc, const char **argv,
-                         const char *program_path, pid_t *pid_ptr);
+                         const char *program_path, pid_t *pid_ptr,
+                         const struct string_pair_vec *additional_envs);
 static int execute_command(const size_t argc, const char **argv,
                            pid_t *pid_ptr);
 static int try_run_external_program(const size_t argc, const char **argv,

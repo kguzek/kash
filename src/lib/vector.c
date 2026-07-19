@@ -31,6 +31,15 @@ int push_back_string(struct string_vec **vec_ptr, char *value) {
   PUSH_BACK();
 }
 
+int push_back_string_pair(struct string_pair_vec *vec_ptr, char *key,
+                          char *value) {
+  int result = push_back_string(&vec_ptr->keys, key);
+  if (result == EXIT_SUCCESS) {
+    result = push_back_string(&vec_ptr->values, value);
+  }
+  return result;
+}
+
 int push_back_string_unique(struct string_vec **vec_ptr, char *value) {
   size_t size = string_vec_size(*vec_ptr);
   for (size_t i = 0; i < size; i++) {
@@ -58,4 +67,49 @@ size_t size_t_vec_size(const struct size_t_vec *vec) {
 size_t string_vec_size(const struct string_vec *vec) {
   if (vec != NULL) {}
   return vec == NULL ? 0 : vec->size;
+}
+
+size_t string_pair_vec_size(const struct string_pair_vec *vec) {
+  size_t keys_size = string_vec_size(vec->keys);
+  size_t values_size = string_vec_size(vec->values);
+  if (keys_size != values_size) {
+    fprintf(
+        stderr,
+        "string_pair_vec_size: inconsistent sizes: %lu key(s) and %lu value(s)",
+        keys_size, values_size);
+    return 0;
+  }
+  return keys_size;
+}
+
+char *string_pair_vec_key(const struct string_pair_vec *vec, size_t idx) {
+  return vec->keys->value[idx];
+}
+
+char *string_pair_vec_value(const struct string_pair_vec *vec, size_t idx) {
+  return vec->values->value[idx];
+}
+
+int free_string_vec(struct string_vec *vec) {
+  if (vec == NULL) {
+    return EXIT_SUCCESS;
+  }
+  for (size_t i = 0; i < vec->size; i++) {
+    free(vec->value[i]);
+  }
+  return EXIT_SUCCESS;
+}
+
+int free_string_pair_vec(struct string_pair_vec *vec) {
+  if (vec == NULL) {
+    return EXIT_SUCCESS;
+  }
+  size_t size = string_pair_vec_size(vec);
+  for (size_t i = 0; i < size; i++) {
+    printf("\nfreeing %s \n", string_pair_vec_key(vec, i));
+    free(string_pair_vec_key(vec, i));
+    printf("\nfreeing %s \n", string_pair_vec_value(vec, i));
+    free(string_pair_vec_value(vec, i));
+  }
+  return EXIT_SUCCESS;
 }

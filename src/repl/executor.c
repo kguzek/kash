@@ -17,6 +17,7 @@
 #include "src/builtins/type.h"
 #include "src/lib/config.h"
 #include "src/lib/path.h"
+#include "src/lib/vector.h"
 
 #define BUILTIN_PID_VALUE 0
 
@@ -132,11 +133,12 @@ static int try_run_external_program(const size_t argc, const char **argv,
     fprintf(stderr, "%s: command not found\n", argv[0]);
     return EXIT_FAILURE;
   }
-  return run_external_program(argc, argv, full_path, pid_ptr);
+  return run_external_program(argc, argv, full_path, pid_ptr, NULL);
 }
 
 int run_external_program(const size_t argc, const char **argv,
-                         const char *program_path, pid_t *pid_ptr) {
+                         const char *program_path, pid_t *pid_ptr,
+                         const struct string_pair_vec *additional_envs) {
   int argv_copy_length = argc + 1;  // +1 for NULL terminator
   char **argv_copy = malloc(argv_copy_length * sizeof(*argv_copy));
   if (!argv_copy) {
@@ -152,6 +154,13 @@ int run_external_program(const size_t argc, const char **argv,
     perror("fork");
     return EXIT_FAILURE;
   case 0:
+    if (additional_envs != NULL) {
+      size_t envs_size = string_pair_vec_size(additional_envs);
+      for (size_t i = 0; i < envs_size; i++) {
+        setenv(string_pair_vec_key(additional_envs, i),
+               string_pair_vec_value(additional_envs, i), false);
+      }
+    }
     execv(program_path, argv_copy);
     fprintf(stderr, "%s: '%s': %s", PROGRAM_NAME, program_path,
             strerror(errno));
