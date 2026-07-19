@@ -46,6 +46,20 @@ int builtin_complete(const size_t argc, const char **argv) {
     }
     return exit_code;
   }
+  if (strcmp(option, "-r") == 0) {
+    if (argc != 3) {
+      fprintf(stderr, "%s: option %s requires exactly one argument\n",
+              program_name, option);
+      return EXIT_FAILURE;
+    }
+
+    int exit_code = unregister_completion_spec(argv[2]);
+    if (exit_code != EXIT_SUCCESS) {
+      fprintf(stderr, "%s: unregistering completion specification failed\n",
+              program_name);
+    }
+    return exit_code;
+  }
   fprintf(stderr, "%s: invalid option: '%s'\n", program_name, option);
   return EXIT_FAILURE;
 }

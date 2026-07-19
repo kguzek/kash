@@ -25,6 +25,20 @@ int register_completion_spec(const char *cmd, const char *spec_path) {
   return push_back_string_pair(&registered_completion_specs, cmd, spec_path);
 }
 
+int unregister_completion_spec(const char *cmd) {
+  size_t size = string_pair_vec_size(&registered_completion_specs);
+  const char *key;
+  for (size_t i = 0; i < size; i++) {
+    key = string_pair_vec_key(&registered_completion_specs, i);
+    if (strcmp(key, cmd) != 0) {
+      continue;
+    }
+    // TODO(kguzek): make this less ugly XD
+    registered_completion_specs.keys->value[i] = "";
+  }
+  return EXIT_SUCCESS;
+}
+
 size_t populate_registered_completion_specs(const char *cmd,
                                             struct string_vec **specs) {
   size_t specs_size = string_pair_vec_size(&registered_completion_specs);

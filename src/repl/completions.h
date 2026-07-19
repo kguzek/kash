@@ -9,6 +9,7 @@
 #include "src/repl/parser.h"
 
 int register_completion_spec(const char *cmd, const char *spec_path);
+int unregister_completion_spec(const char *cmd);
 size_t populate_registered_completion_specs(const char *cmd,
                                             struct string_vec **specs);
 
