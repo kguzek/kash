@@ -97,11 +97,13 @@ int autocomplete(int count, int key) {
     size_t cmdi = cmdc - 1;
     const size_t argc = argcv[cmdi];
     const char **argv = cmdv[cmdi];
+    const char *cmd = argv[0], *previous_token = "";
 
     if (argc > 0 && (parse_ctx.starting_new_arg)) {
       current_token = "";
-      result = populate_argument_completions(&completions, argc, argv,
-                                             current_token);
+      previous_token = argv[cmdc - 1];
+      result = populate_argument_completions(&completions, cmd, current_token,
+                                             previous_token);
     } else {
       switch (argc) {
       case 0:
@@ -114,8 +116,9 @@ int autocomplete(int count, int key) {
         break;
       default:
         current_token = argv[argc - 1];
-        result = populate_argument_completions(&completions, argc, argv,
-                                               current_token);
+        previous_token = argv[argc - 2];
+        result = populate_argument_completions(&completions, cmd, current_token,
+                                               previous_token);
         break;
       }
     }
@@ -144,16 +147,18 @@ static int populate_command_completions(struct string_vec **completions,
 }
 
 static int populate_argument_completions(struct string_vec **completions,
-                                         const size_t argc, const char **argv,
-                                         const char *current_token) {
+                                         const char *cmd,
+                                         const char *current_token,
+                                         const char *previous_token) {
   struct string_vec *spec_paths = NULL;
   size_t spec_paths_size =
-      populate_registered_completion_specs(argv[0], &spec_paths);
+      populate_registered_completion_specs(cmd, &spec_paths);
   if (spec_paths_size == 0) {
     // fallback to filename completions
     return populate_filename_completions(completions, current_token);
   } else {
-    return populate_spec_completions(completions, spec_paths, current_token);
+    return populate_spec_completions(completions, spec_paths, cmd,
+                                     current_token, previous_token);
   }
 }
 
@@ -336,7 +341,8 @@ static int populate_filename_completions(struct string_vec **filenames,
 
 static int populate_spec_completions(struct string_vec **completions,
                                      struct string_vec *spec_paths,
-                                     const char *current_token) {
+                                     const char *cmd, const char *current_token,
+                                     const char *previous_token) {
   size_t spec_paths_size = spec_paths->size;
   int saved_stdin = dup(STDIN_FILENO), saved_stdout = dup(STDOUT_FILENO);
   const char *spec_path;
@@ -348,9 +354,9 @@ static int populate_spec_completions(struct string_vec **completions,
       return EXIT_FAILURE;
     }
     spec_path = spec_paths->value[i];
-    const char *spec_argv[] = {spec_path};
+    const char *spec_argv[] = {spec_path, cmd, current_token, previous_token};
     dup2(pipes[1], STDOUT_FILENO);
-    int result = run_external_program(1, spec_argv, spec_path, &pid);
+    int result = run_external_program(4, spec_argv, spec_path, &pid);
     close(pipes[1]);
     dup2(saved_stdout, STDOUT_FILENO);
     if (result != EXIT_SUCCESS) {

@@ -16,8 +16,9 @@ int autocomplete(int count, int key);
 static int populate_command_completions(struct string_vec **completions,
                                         const char *cmd);
 static int populate_argument_completions(struct string_vec **completions,
-                                         const size_t argc, const char **argv,
-                                         const char *current_token);
+                                         const char *cmd,
+                                         const char *current_token,
+                                         const char *previous_token);
 static int populate_builtin_completions(struct string_vec **completions,
                                         const char *cmd);
 
@@ -36,7 +37,8 @@ static int populate_external_completions(struct string_vec **externals,
                                          const char *current_token);
 static int populate_spec_completions(struct string_vec **completions,
                                      struct string_vec *spec_paths,
-                                     const char *current_token);
+                                     const char *cmd, const char *current_token,
+                                     const char *previous_token);
 /* Populates `filenames` with the names of all regular files, symlinks or
  * directories in the current working directory, such that their name begins
  * with `current_token`. If `current_token` contains a path, then the directory
