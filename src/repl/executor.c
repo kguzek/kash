@@ -13,6 +13,7 @@
 #include "src/builtins/complete.h"
 #include "src/builtins/echo.h"
 #include "src/builtins/exit.h"
+#include "src/builtins/jobs.h"
 #include "src/builtins/pwd.h"
 #include "src/builtins/type.h"
 #include "src/lib/config.h"
@@ -122,6 +123,9 @@ static int execute_command(const size_t argc, const char **argv,
   }
   if (strcmp(first_word, "complete") == 0) {
     return builtin_complete(argc, argv);
+  }
+  if (strcmp(first_word, "jobs") == 0) {
+    return builtin_jobs(argc, argv);
   }
   return try_run_external_program(argc, argv, pid_ptr);
 }
