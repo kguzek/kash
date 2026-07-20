@@ -11,4 +11,4 @@ add_executable(kash ${SOURCE_FILES})
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-target_link_libraries(kash PRIVATE readline)
+target_link_libraries(kash PRIVATE readline m)

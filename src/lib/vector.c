@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 
+#include "src/lib/jobs.h"
+
 #define PUSH_BACK()                                                            \
   size_t new_size = size + 1;                                                  \
   if ((size & new_size) == 0) {                                                \
@@ -55,6 +57,7 @@
 
 VECTOR_IMPL(size_t, size_t);
 PTR_VECTOR_IMPL(string, char *);
+PTR_VECTOR_IMPL(job, struct job_definition *);
 
 static bool string_equal(const char *a, const char *b) {
   return strcmp(a, b) == 0;
@@ -62,6 +65,11 @@ static bool string_equal(const char *a, const char *b) {
 
 static bool size_t_equal(const size_t a, const size_t b) {
   return a == b;
+}
+
+static bool job_equal(const struct job_definition *a,
+                      const struct job_definition *b) {
+  return a->id == b->id || a->pid == b->pid;
 }
 
 size_t string_pair_vec_size(const struct string_pair_vec *vec) {

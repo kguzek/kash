@@ -17,6 +17,7 @@
 #include "src/builtins/pwd.h"
 #include "src/builtins/type.h"
 #include "src/lib/config.h"
+#include "src/lib/jobs.h"
 #include "src/lib/path.h"
 #include "src/lib/vector.h"
 
@@ -83,11 +84,36 @@ int execute_commands(size_t cmdc, const char **cmdv[restrict cmdc],
     if (pids[cmd_idx] == BUILTIN_PID_VALUE) {
       // was not fork+exec'd (e.g. builtin)
       exit_codes[cmd_idx] = command_result;
-    } else if (cmd_separators[cmd_idx] == CMD_SEP_SQTL) {
-      int status;
-      waitpid(pids[cmd_idx], &status, 0);
-      exit_codes[cmd_idx] =
-          WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+    } else {
+      switch (cmd_separators[cmd_idx]) {
+      case CMD_SEP_SQTL: {
+        int status;
+        waitpid(pids[cmd_idx], &status, 0);
+        exit_codes[cmd_idx] =
+            WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+      }; break;
+      case CMD_SEP_BGND: {
+        size_t argv_bytes = 1;
+        for (size_t i = 0; i < argc; i++) {
+          argv_bytes += strlen(argv[i]) + 1;
+        }
+        char *job_cmd = malloc(argv_bytes);
+        const char *arg;
+        size_t arg_size, arg_offset = 0;
+        // TODO(kguzek): handle quoted arguments
+        for (size_t i = 0; i < argc; i++) {
+          arg = argv[i];
+          arg_size = strlen(arg);
+          memcpy(job_cmd + arg_offset, arg, arg_size);
+          arg_offset += arg_size;
+          job_cmd[arg_offset++] = ' ';
+        }
+        job_cmd[argv_bytes - 1] = '\0';
+        exit_codes[cmd_idx] = define_job(pids[cmd_idx], job_cmd);
+      } break;
+      default:
+        break;
+      }
     }
   }
   pid_t pid;
@@ -106,8 +132,6 @@ int execute_commands(size_t cmdc, const char **cmdv[restrict cmdc],
     case CMD_SEP_SQTL:
       break;
     case CMD_SEP_BGND:
-      uint job_id = 1;  // TODO: change
-      printf("[%u] %d\n", job_id, pids[cmd_idx]);
       break;
     default: {
       int status;
