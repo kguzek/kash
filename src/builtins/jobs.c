@@ -19,7 +19,9 @@ int builtin_jobs(size_t argc, const char **argv) {
   struct job_definition *job;
   for (size_t i = 0; i < jobs_size; i++) {
     job = jobs->value[i];
-    char job_last = job->id == jobs_size ? '+' : ' ';
+    char job_last = job->id == jobs_size - 1 ? '-'
+                    : job->id == jobs_size   ? '+'
+                                             : ' ';
     char *job_status = get_job_status_text(job->status);
     char status_padding[STATUS_MAX_WIDTH];
     float job_id_width = log10f(job->id * 10);
