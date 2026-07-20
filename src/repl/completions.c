@@ -60,8 +60,8 @@ size_t populate_registered_completion_specs(const char *cmd,
 }
 
 int autocomplete(int count, int key) {
-  size_t cmdc;
-  struct size_t_vec *argc_vec;
+  size_t cmdc = 0;
+  struct size_t_vec *argc_vec = NULL;
   int function_result = push_back_size_t(&argc_vec, 0);
   if (function_result != EXIT_SUCCESS) {
     return function_result;
@@ -80,19 +80,12 @@ int autocomplete(int count, int key) {
     free(input);
     return result;
   }
-  bool *cmd_pipes = malloc(cmdc * sizeof(*cmd_pipes));
-  if (cmd_pipes == NULL) {
-    perror("malloc");
-    free(argc_vec);
-    free(input);
-    return EXIT_FAILURE;
-  }
+  enum COMMAND_SEPARATOR cmd_separators[cmdc];
   size_t *argcv = argc_vec->value;
-  const char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_pipes);
+  const char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
   if (cmdv == NULL) {
     free(argc_vec);
     free(input);
-    free(cmd_pipes);
     return EXIT_FAILURE;
   }
   struct string_vec *completions = NULL;

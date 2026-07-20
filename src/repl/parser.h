@@ -7,6 +7,14 @@
 
 #include "src/lib/vector.h"
 
+enum COMMAND_SEPARATOR {
+  CMD_SEP_NONE,  // Final command in sequence
+  CMD_SEP_SQTL,  // Sequential command (;)
+  CMD_SEP_PIPE,  // Piped command (|)
+  CMD_SEP_BGND,  // Background command (&)
+  // TODO(kguzek): add logical operators, e.g. '&&', '||'
+};
+
 struct cmd_parse_ctx {
   bool in_single_quotes;
   bool in_double_quotes;
@@ -26,8 +34,9 @@ struct cmd_parse_ctx {
  * command after a semicolon or pipe) */
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argv,
                    struct cmd_parse_ctx *ctx_out);
-const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
-                            bool *cmd_pipes);
+const char ***
+allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
+              enum COMMAND_SEPARATOR cmd_separators[restrict cmdc]);
 int handle_redirection(char *input, char *redirection);
 static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx);
 static const bool is_escapable_in_double_quotes(const char c);

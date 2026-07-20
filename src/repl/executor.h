@@ -7,9 +7,11 @@
 #include <sys/types.h>
 
 #include "src/lib/vector.h"
+#include "src/repl/parser.h"
 
-int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
-                     const size_t argcv[]);
+int execute_commands(size_t cmdc, const char **cmdv[restrict cmdc],
+                     const enum COMMAND_SEPARATOR cmd_separators[restrict cmdc],
+                     const size_t argcv[restrict cmdc]);
 int run_external_program(const size_t argc, const char **argv,
                          const char *program_path, pid_t *pid_ptr,
                          const struct string_pair_vec *additional_envs);

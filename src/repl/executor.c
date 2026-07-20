@@ -22,9 +22,10 @@
 
 #define BUILTIN_PID_VALUE 0
 
-int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
+int execute_commands(size_t cmdc, const char **cmdv[restrict cmdc],
+                     const enum COMMAND_SEPARATOR cmd_separators[restrict cmdc],
                      const size_t argcv[]) {
-  if (cmd_pipes[cmdc - 1]) {
+  if (cmd_separators[cmdc - 1] == CMD_SEP_PIPE) {
     // sanity check; parser ensures this
     fprintf(stderr, "%s: |: final pipeline command has no target\n",
             PROGRAM_NAME);
@@ -33,7 +34,7 @@ int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
 
   int pipes[cmdc][2];
   for (size_t cmd_idx = 0; cmd_idx < cmdc; cmd_idx++) {
-    if (!cmd_pipes[cmd_idx]) {
+    if (cmd_separators[cmd_idx] != CMD_SEP_PIPE) {
       continue;
     }
     if (pipe(pipes[cmd_idx]) == 0) {
@@ -59,7 +60,7 @@ int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
     argc = argcv[cmd_idx];
     argv = cmdv[cmd_idx];
     has_input_pipe = has_output_pipe;
-    has_output_pipe = cmd_pipes[cmd_idx];
+    has_output_pipe = cmd_separators[cmd_idx] == CMD_SEP_PIPE;
     saved_stdin = dup(STDIN_FILENO);
     saved_stdout = dup(STDOUT_FILENO);
     if (has_input_pipe) {
@@ -82,11 +83,18 @@ int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
     if (pids[cmd_idx] == BUILTIN_PID_VALUE) {
       // was not fork+exec'd (e.g. builtin)
       exit_codes[cmd_idx] = command_result;
+    } else if (cmd_separators[cmd_idx] == CMD_SEP_SQTL) {
+      int status;
+      waitpid(pids[cmd_idx], &status, 0);
+      exit_codes[cmd_idx] =
+          WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
     }
   }
   pid_t pid;
+  enum COMMAND_SEPARATOR cmd_separator;
   for (size_t cmd_idx = 0; cmd_idx < cmdc; cmd_idx++) {
-    if (cmd_pipes[cmd_idx]) {
+    cmd_separator = cmd_separators[cmd_idx];
+    if (cmd_separator == CMD_SEP_PIPE) {
       close(pipes[cmd_idx][0]);
       close(pipes[cmd_idx][1]);
     }
@@ -94,10 +102,20 @@ int execute_commands(size_t cmdc, const char ***cmdv, const bool *cmd_pipes,
     if (pid == BUILTIN_PID_VALUE) {
       continue;
     }
-    int status;
-    waitpid(pid, &status, 0);
-    exit_codes[cmd_idx] =
-        WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+    switch (cmd_separator) {
+    case CMD_SEP_SQTL:
+      break;
+    case CMD_SEP_BGND:
+      uint job_id = 1;  // TODO: change
+      printf("[%u] %d\n", job_id, pids[cmd_idx]);
+      break;
+    default: {
+      int status;
+      waitpid(pid, &status, 0);
+      exit_codes[cmd_idx] =
+          WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+    }; break;
+    }
   }
   return exit_codes[cmdc - 1];
 }

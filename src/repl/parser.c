@@ -38,6 +38,7 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
   struct cmd_parse_ctx ctx_local;
   struct cmd_parse_ctx *ctx = strict ? &ctx_local : ctx_out;
   initialize_cmd_parse_ctx(ctx);
+  char last_command_separator = ' ';
   for (const char *c = input; *c != '\0'; c++) {
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
@@ -55,6 +56,7 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
       }
       ctx->starting_new_cmd = true;
       ctx->starting_new_arg = true;
+      last_command_separator = ';';
       break;
     case '|':
       if (char_escaped) {
@@ -68,6 +70,22 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
       }
       ctx->starting_new_cmd = true;
       ctx->starting_new_arg = true;
+      last_command_separator = '|';
+      break;
+    case '&':
+      if (char_escaped) {
+        goto handle_other_char;
+      }
+      if (ctx->starting_new_cmd) {
+        if (strict) {
+          fprintf(stderr, "%s: &: missing background job command\n",
+                  PROGRAM_NAME);
+        }
+        return EXIT_FAILURE;
+      }
+      ctx->starting_new_cmd = true;
+      ctx->starting_new_arg = true;
+      last_command_separator = '&';
       break;
     case ' ':
       if (!char_escaped) {
@@ -90,13 +108,13 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
       break;
     }
   }
-  if ((*cmdc) > 0 && ctx->starting_new_cmd) {
+  if ((*cmdc) > 0 && ctx->starting_new_cmd && last_command_separator == '|') {
     if (strict) {
-      fprintf(stderr, "%s: |: missing pipe target\n", PROGRAM_NAME);
+      fprintf(stderr, "%s: %c: missing pipe target\n", PROGRAM_NAME,
+              last_command_separator);
       return EXIT_FAILURE;
-    } else {
-      (*cmdc)++;
     }
+    (*cmdc)++;
   }
   if (strict) {
     if (ctx->in_single_quotes) {
@@ -111,8 +129,9 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
   return EXIT_SUCCESS;
 }
 
-const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
-                            bool *cmd_pipes) {
+const char ***
+allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
+              enum COMMAND_SEPARATOR cmd_separators[restrict cmdc]) {
   size_t total_args = 0;
   for (size_t i = 0; i < cmdc; i++) {
     // TODO(kguzek): add +1 if we use NULL terminators in future
@@ -128,7 +147,7 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
   // as pointers to the appropriate command argv's starting index
   const char **argv_storage = (const char **)(cmdv + cmdc);
   for (size_t i = 0; i < cmdc; i++) {
-    cmd_pipes[i] = false;
+    cmd_separators[i] = CMD_SEP_NONE;
     cmdv[i] = argv_storage;
     // TODO(kguzek): add +1 if we use NULL terminators in future
     argv_storage += argcv[i];
@@ -152,7 +171,7 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
       // NULL-terminate last arg of previous command
       input[input_idx++] = '\0';
       arg_idx = 0;
-      cmd_idx++;
+      cmd_separators[cmd_idx++] = CMD_SEP_SQTL;
       ctx->starting_new_arg = true;
       ctx->starting_new_cmd = true;
       break;
@@ -163,7 +182,17 @@ const char ***allocate_cmdv(size_t cmdc, const size_t argcv[], char *input,
       // NULL-terminate last arg of previous command
       input[input_idx++] = '\0';
       arg_idx = 0;
-      cmd_pipes[cmd_idx++] = true;
+      cmd_separators[cmd_idx++] = CMD_SEP_PIPE;
+      ctx->starting_new_arg = true;
+      ctx->starting_new_cmd = true;
+      break;
+    case '&':
+      if (char_escaped) {
+        goto copy_char;
+      }
+      input[input_idx++] = '\0';
+      arg_idx = 0;
+      cmd_separators[cmd_idx++] = CMD_SEP_BGND;
       ctx->starting_new_arg = true;
       ctx->starting_new_cmd = true;
       break;
