@@ -22,7 +22,8 @@ static char *PREVIOUS_AUTOCOMPLETE_INPUT = NULL;
 static struct string_pair_vec registered_completion_specs = {NULL, NULL};
 
 int register_completion_spec(const char *cmd, const char *spec_path) {
-  return push_back_string_pair(&registered_completion_specs, cmd, spec_path);
+  return push_back_string_pair(&registered_completion_specs, strdup(cmd),
+                               strdup(spec_path));
 }
 
 int unregister_completion_spec(const char *cmd) {
@@ -53,7 +54,7 @@ size_t populate_registered_completion_specs(const char *cmd,
       continue;
     }
     spec_path = string_pair_vec_value(&registered_completion_specs, i);
-    push_back_string(specs, spec_path);
+    push_back_string(specs, strdup(spec_path));
     registered_specs++;
   }
   return registered_specs;
@@ -156,8 +157,10 @@ static int populate_argument_completions(struct string_vec **completions,
     // fallback to filename completions
     return populate_filename_completions(completions, current_token);
   } else {
-    return populate_spec_completions(completions, spec_paths, cmd,
-                                     current_token, previous_token);
+    int exit_code = populate_spec_completions(completions, spec_paths, cmd,
+                                              current_token, previous_token);
+    free_string_vec(spec_paths);
+    return exit_code;
   }
 }
 
