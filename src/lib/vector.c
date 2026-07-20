@@ -21,52 +21,47 @@
   (*vec_ptr)->size = new_size;                                                 \
   return EXIT_SUCCESS;
 
-int push_back_size_t(struct size_t_vec **vec_ptr, size_t value) {
-  size_t size = size_t_vec_size(*vec_ptr);
-  PUSH_BACK();
-}
-
-int push_back_string(struct string_vec **vec_ptr, char *value) {
-  size_t size = string_vec_size(*vec_ptr);
-  PUSH_BACK();
-}
-
-int push_back_string_pair(struct string_pair_vec *vec_ptr, char *key,
-                          char *value) {
-  int result = push_back_string(&vec_ptr->keys, key);
-  if (result == EXIT_SUCCESS) {
-    result = push_back_string(&vec_ptr->values, value);
+#define VECTOR_IMPL(name, type)                                                \
+  size_t name##_vec_size(const struct name##_vec *vec) {                       \
+    return vec == NULL ? 0 : vec->size;                                        \
+  }                                                                            \
+                                                                               \
+  int push_back_##name(struct name##_vec **vec_ptr, type value) {              \
+    size_t size = name##_vec_size(*vec_ptr);                                   \
+    PUSH_BACK();                                                               \
+  }                                                                            \
+                                                                               \
+  int push_back_##name##_unique(struct name##_vec **vec_ptr, type value) {     \
+    size_t size = name##_vec_size(*vec_ptr);                                   \
+    for (size_t i = 0; i < size; i++) {                                        \
+      if (name##_equal((*vec_ptr)->value[i], value)) {                         \
+        return EXIT_SUCCESS;                                                   \
+      }                                                                        \
+    }                                                                          \
+    PUSH_BACK();                                                               \
   }
-  return result;
+
+#define PTR_VECTOR_IMPL(name, type)                                            \
+  int free_##name##_vec(struct name##_vec *vec) {                              \
+    if (vec == NULL) {                                                         \
+      return EXIT_SUCCESS;                                                     \
+    }                                                                          \
+    for (size_t i = 0; i < vec->size; i++) {                                   \
+      free(vec->value[i]);                                                     \
+    }                                                                          \
+    return EXIT_SUCCESS;                                                       \
+  }                                                                            \
+  VECTOR_IMPL(name, type);
+
+VECTOR_IMPL(size_t, size_t);
+PTR_VECTOR_IMPL(string, char *);
+
+static bool string_equal(const char *a, const char *b) {
+  return strcmp(a, b) == 0;
 }
 
-int push_back_string_unique(struct string_vec **vec_ptr, char *value) {
-  size_t size = string_vec_size(*vec_ptr);
-  for (size_t i = 0; i < size; i++) {
-    if (strcmp((*vec_ptr)->value[i], value) == 0) {
-      return EXIT_SUCCESS;
-    }
-  }
-  PUSH_BACK();
-}
-
-int push_back_size_t_unique(struct size_t_vec **vec_ptr, size_t value) {
-  size_t size = size_t_vec_size(*vec_ptr);
-  for (size_t i = 0; i < size; i++) {
-    if ((*vec_ptr)->value[i] == value) {
-      return EXIT_SUCCESS;
-    }
-  }
-  PUSH_BACK();
-}
-
-size_t size_t_vec_size(const struct size_t_vec *vec) {
-  return vec == NULL ? 0 : vec->size;
-}
-
-size_t string_vec_size(const struct string_vec *vec) {
-  if (vec != NULL) {}
-  return vec == NULL ? 0 : vec->size;
+static bool size_t_equal(const size_t a, const size_t b) {
+  return a == b;
 }
 
 size_t string_pair_vec_size(const struct string_pair_vec *vec) {
@@ -82,22 +77,13 @@ size_t string_pair_vec_size(const struct string_pair_vec *vec) {
   return keys_size;
 }
 
-char *string_pair_vec_key(const struct string_pair_vec *vec, size_t idx) {
-  return vec->keys->value[idx];
-}
-
-char *string_pair_vec_value(const struct string_pair_vec *vec, size_t idx) {
-  return vec->values->value[idx];
-}
-
-int free_string_vec(struct string_vec *vec) {
-  if (vec == NULL) {
-    return EXIT_SUCCESS;
+int push_back_string_pair(struct string_pair_vec *vec_ptr, char *key,
+                          char *value) {
+  int result = push_back_string(&vec_ptr->keys, key);
+  if (result == EXIT_SUCCESS) {
+    result = push_back_string(&vec_ptr->values, value);
   }
-  for (size_t i = 0; i < vec->size; i++) {
-    free(vec->value[i]);
-  }
-  return EXIT_SUCCESS;
+  return result;
 }
 
 int free_string_pair_vec(struct string_pair_vec *vec) {
@@ -106,10 +92,16 @@ int free_string_pair_vec(struct string_pair_vec *vec) {
   }
   size_t size = string_pair_vec_size(vec);
   for (size_t i = 0; i < size; i++) {
-    printf("\nfreeing %s \n", string_pair_vec_key(vec, i));
     free(string_pair_vec_key(vec, i));
-    printf("\nfreeing %s \n", string_pair_vec_value(vec, i));
     free(string_pair_vec_value(vec, i));
   }
   return EXIT_SUCCESS;
+}
+
+char *string_pair_vec_key(const struct string_pair_vec *vec, size_t idx) {
+  return vec->keys->value[idx];
+}
+
+char *string_pair_vec_value(const struct string_pair_vec *vec, size_t idx) {
+  return vec->values->value[idx];
 }
