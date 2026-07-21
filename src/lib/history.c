@@ -18,3 +18,7 @@ int push_history_entry(const char *cmd) {
   add_history(cmd);
   return EXIT_SUCCESS;
 }
+
+int read_history_from_file(const char *path) {
+  return read_history(path);
+}

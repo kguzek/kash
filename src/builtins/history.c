@@ -2,6 +2,7 @@
 
 #include "src/builtins/history.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +24,13 @@ int builtin_history(size_t argc, const char *argv[argc]) {
               PROGRAM_NAME, command_name, option);
       return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
+    const char *path = argv[2];
+    int result = read_history_from_file(path);
+    if (result != EXIT_SUCCESS) {
+      fprintf(stderr, "%s: %s: %s: %s\n", PROGRAM_NAME, command_name, path,
+              strerror(errno));
+    }
+    return result;
   }
   if (argc > 2) {
     fprintf(stderr,
