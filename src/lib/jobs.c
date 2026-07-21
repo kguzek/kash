@@ -16,8 +16,7 @@ static const size_t STATUS_MAX_WIDTH = 24;
 
 int define_job(pid_t pid, const char *cmd) {
   struct job_definition *job = malloc(sizeof(struct job_definition));
-  size_t jobs_size = job_vec_size(jobs);
-  job->id = jobs_size + 1;
+  job->id = get_new_job_id();
   job->pid = pid;
   job->cmd = cmd;
   job->status = JOB_STATUS_RUNNING;
@@ -32,7 +31,7 @@ int print_updated_jobs_list(bool print_all_jobs) {
   size_t last_job_id = 0, penultimate_job_id = 0;
   for (size_t i = jobs_size; i > 0; i--) {
     job = jobs->value[i - 1];
-    if (job->status == JOB_STATUS_DONE) {
+    if (job == NULL || job->status == JOB_STATUS_DONE) {
       continue;
     }
     if (last_job_id == 0) {
@@ -44,7 +43,7 @@ int print_updated_jobs_list(bool print_all_jobs) {
   }
   for (size_t i = 0; i < jobs_size; i++) {
     job = jobs->value[i];
-    if (job->status == JOB_STATUS_DONE) {
+    if (job == NULL || job->status == JOB_STATUS_DONE) {
       continue;
     }
     update_job_status(job);
@@ -67,12 +66,31 @@ int print_updated_jobs_list(bool print_all_jobs) {
     status_padding[padding_chars] = '\0';
     printf("[%lu]%c  %s%s%s\n", job->id, job_indicator, job_status,
            status_padding, job->cmd);
+    if (job->status == JOB_STATUS_DONE) {
+      free(job);
+      // TODO(kguzek): remove job from table
+      jobs->value[i] = NULL;
+    }
   }
   return EXIT_SUCCESS;
 }
 
 static struct job_vec **get_job_definitions() {
   return &jobs;
+}
+
+static size_t get_new_job_id() {
+  size_t highest_job_id = 0;
+  size_t jobs_size = job_vec_size(jobs);
+  struct job_definition *job;
+  for (size_t i = 0; i < jobs_size; i++) {
+    job = jobs->value[i];
+    if (job == NULL || job->status == JOB_STATUS_DONE) {
+      continue;
+    }
+    highest_job_id = job->id;
+  }
+  return highest_job_id + 1;
 }
 
 static int update_job_status(struct job_definition *job) {
