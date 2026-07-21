@@ -5,8 +5,8 @@
 
 #include <stddef.h>
 
+char *prepare_input();
 size_t collect_input(char **input);
 int reset_output();
-int reset_input();
 
 #endif  // SRC_REPL_IO_H_

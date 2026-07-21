@@ -5,10 +5,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <readline/history.h>
 #include <readline/readline.h>
 
+#include "src/lib/history.h"
 #include "src/lib/jobs.h"
 #include "src/repl/completions.h"
+
+char *prepare_input() {
+  char *input = NULL;
+  using_history();
+  collect_input(&input);
+  return input;
+}
 
 size_t collect_input(char **input) {
   rl_bind_key('\t', autocomplete);
@@ -19,6 +28,8 @@ size_t collect_input(char **input) {
     return 0;
   }
   *input = result;
+  push_history_entry(result);
+  add_history(result);
 
   // remove trailing newline
   size_t len = strlen(*input);
@@ -31,10 +42,5 @@ size_t collect_input(char **input) {
 int reset_output() {
   freopen("/dev/tty", "w", stdout);
   freopen("/dev/tty", "w", stderr);
-  return EXIT_SUCCESS;
-}
-
-int reset_input() {
-  freopen("/dev/tty", "r", stdin);
   return EXIT_SUCCESS;
 }

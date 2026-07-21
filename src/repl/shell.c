@@ -7,18 +7,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/lib/history.h"
 #include "src/lib/vector.h"
 #include "src/repl/executor.h"
 #include "src/repl/io.h"
 #include "src/repl/parser.h"
 
 int loop() {
-  char *input = NULL;
-  collect_input(&input);
+  char *input = prepare_input();
   while (input != NULL) {
-    push_history_entry(input);
     process_input(input);
+    free(input);
     collect_input(&input);
   }
 
