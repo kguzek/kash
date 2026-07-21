@@ -13,5 +13,8 @@ int push_history_entry(const char *cmd);
 int read_history_from_file(const char *path);
 int write_history_to_file(const char *path);
 int append_history_to_file(const char *path);
+int save_history();
+int restore_history();
+static char *get_history_file_path();
 
 #endif  // SRC_LIB_HISTORY_H_

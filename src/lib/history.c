@@ -36,3 +36,15 @@ int append_history_to_file(const char *path) {
   last_append_history_size = history_size;
   return append_history(lines, path);
 }
+
+int save_history() {
+  return write_history_to_file(get_history_file_path());
+}
+
+int restore_history() {
+  return read_history_from_file(get_history_file_path());
+}
+
+static char *get_history_file_path() {
+  return getenv("HISTFILE");
+}

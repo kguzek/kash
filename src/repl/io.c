@@ -15,6 +15,7 @@
 char *prepare_input() {
   char *input = NULL;
   using_history();
+  restore_history();
   collect_input(&input);
   return input;
 }
