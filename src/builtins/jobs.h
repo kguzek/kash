@@ -8,6 +8,7 @@
 #include "src/lib/jobs.h"
 
 int builtin_jobs(size_t argc, const char **argv);
+static int update_job_status(struct job_definition *job);
 static char *get_job_status_text(enum JOB_STATUS status);
 
 #endif  // SRC_BUILTINS_JOBS_H_

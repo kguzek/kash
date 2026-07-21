@@ -7,6 +7,7 @@
 
 enum JOB_STATUS {
   JOB_STATUS_RUNNING,
+  JOB_STATUS_DONE,
 };
 
 struct job_definition {
