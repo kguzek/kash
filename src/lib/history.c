@@ -3,7 +3,6 @@
 #include "src/lib/history.h"
 
 #include <stdlib.h>
-#include <string.h>
 
 HIST_ENTRY **get_history_entries() {
   return history_list();
@@ -21,4 +20,8 @@ int push_history_entry(const char *cmd) {
 
 int read_history_from_file(const char *path) {
   return read_history(path);
+}
+
+int write_history_to_file(const char *path) {
+  return write_history(path);
 }
