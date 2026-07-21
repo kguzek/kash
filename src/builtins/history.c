@@ -7,11 +7,10 @@
 
 #include "src/lib/config.h"
 #include "src/lib/history.h"
-#include "src/lib/vector.h"
 
 int builtin_history(size_t argc, const char *argv[argc]) {
-  struct string_vec *history = get_history_entries();
-  size_t history_size = string_vec_size(history);
+  HIST_ENTRY **history = get_history_entries();
+  size_t history_size = get_history_size();
   size_t entry_start_idx = 0;
   if (argc > 1) {
     if (argc > 2) {
@@ -27,8 +26,13 @@ int builtin_history(size_t argc, const char *argv[argc]) {
       entry_start_idx = history_size - result;
     }
   }
+  HIST_ENTRY *entry;
   for (size_t i = entry_start_idx; i < history_size; i++) {
-    printf("    %lu  %s\n", i + 1, history->value[i]);
+    entry = history[i];
+    if (entry == NULL) {
+      continue;
+    }
+    printf("    %lu  %s\n", i + 1, entry->line);
   }
   return EXIT_SUCCESS;
 }

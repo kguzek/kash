@@ -29,7 +29,6 @@ size_t collect_input(char **input) {
   }
   *input = result;
   push_history_entry(result);
-  add_history(result);
 
   // remove trailing newline
   size_t len = strlen(*input);

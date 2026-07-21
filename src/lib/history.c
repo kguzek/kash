@@ -2,17 +2,19 @@
 
 #include "src/lib/history.h"
 
+#include <stdlib.h>
 #include <string.h>
 
-#include "src/builtins/history.h"
-#include "src/lib/vector.h"
+HIST_ENTRY **get_history_entries() {
+  return history_list();
+}
 
-static struct string_vec *history = NULL;
-
-struct string_vec *get_history_entries() {
-  return history;
+size_t get_history_size() {
+  HISTORY_STATE *history_state = history_get_history_state();
+  return history_state == NULL ? 0 : history_state->length;
 }
 
 int push_history_entry(const char *cmd) {
-  return push_back_string(&history, strdup(cmd));
+  add_history(cmd);
+  return EXIT_SUCCESS;
 }

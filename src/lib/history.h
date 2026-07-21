@@ -3,9 +3,12 @@
 #ifndef SRC_LIB_HISTORY_H_
 #define SRC_LIB_HISTORY_H_
 
-static struct string_vec *history;
+#include <stddef.h>
+#include <stdio.h>
+#include <readline/history.h>
 
-struct string_vec *get_history_entries();
+HIST_ENTRY **get_history_entries();
+size_t get_history_size();
 int push_history_entry(const char *cmd);
 
 #endif  // SRC_LIB_HISTORY_H_
