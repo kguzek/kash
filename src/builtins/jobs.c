@@ -62,8 +62,8 @@ static int update_job_status(struct job_definition *job) {
     return EXIT_SUCCESS;
   }
   int status;
-  waitpid(job->pid, &status, WNOHANG);
-  if (WIFEXITED(status)) {
+  pid_t result = waitpid(job->pid, &status, WNOHANG);
+  if (result == job->pid && WIFEXITED(status)) {
     job->status = JOB_STATUS_DONE;
   }
   return EXIT_SUCCESS;
