@@ -19,6 +19,9 @@ struct job_definition {
 
 static struct job_vec *jobs;
 int define_job(pid_t pid, const char *cmd);
-struct job_vec **get_job_definitions();
+int print_updated_jobs_list(bool print_all_jobs);
+static struct job_vec **get_job_definitions();
+static int update_job_status(struct job_definition *job);
+static char *get_job_status_text(enum JOB_STATUS status);
 
 #endif  // SRC_LIB_JOBS_H_

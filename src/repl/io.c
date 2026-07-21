@@ -7,10 +7,12 @@
 #include <string.h>
 #include <readline/readline.h>
 
+#include "src/lib/jobs.h"
 #include "src/repl/completions.h"
 
 size_t collect_input(char **input) {
   rl_bind_key('\t', autocomplete);
+  print_updated_jobs_list(false);
   char *result = readline("$ ");
   if (result == NULL) {
     *input = NULL;
