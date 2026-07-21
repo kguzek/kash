@@ -13,6 +13,7 @@
 #include "src/builtins/complete.h"
 #include "src/builtins/echo.h"
 #include "src/builtins/exit.h"
+#include "src/builtins/history.h"
 #include "src/builtins/jobs.h"
 #include "src/builtins/pwd.h"
 #include "src/builtins/type.h"
@@ -144,7 +145,7 @@ int execute_commands(size_t cmdc, const char **cmdv[restrict cmdc],
   return exit_codes[cmdc - 1];
 }
 
-static int execute_command(const size_t argc, const char **argv,
+static int execute_command(const size_t argc, const char *argv[argc],
                            pid_t *pid_ptr) {
   *pid_ptr = BUILTIN_PID_VALUE;
   const char *first_word = argv[0];
@@ -169,10 +170,13 @@ static int execute_command(const size_t argc, const char **argv,
   if (strcmp(first_word, "jobs") == 0) {
     return builtin_jobs(argc, argv);
   }
+  if (strcmp(first_word, "history") == 0) {
+    return builtin_history(argc, argv);
+  }
   return try_run_external_program(argc, argv, pid_ptr);
 }
 
-static int try_run_external_program(const size_t argc, const char **argv,
+static int try_run_external_program(const size_t argc, const char *argv[argc],
                                     pid_t *pid_ptr) {
   char *full_path = get_full_path(argv[0]);
   if (full_path == NULL) {
@@ -182,7 +186,7 @@ static int try_run_external_program(const size_t argc, const char **argv,
   return run_external_program(argc, argv, full_path, pid_ptr, NULL);
 }
 
-int run_external_program(const size_t argc, const char **argv,
+int run_external_program(const size_t argc, const char *argv[argc],
                          const char *program_path, pid_t *pid_ptr,
                          const struct string_pair_vec *additional_envs) {
   int argv_copy_length = argc + 1;  // +1 for NULL terminator
