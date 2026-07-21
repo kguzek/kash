@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "src/lib/config.h"
+#include "src/lib/history.h"
 #include "src/lib/strings.h"
 
 int builtin_exit(const size_t argc, const char **argv) {
@@ -30,6 +31,7 @@ int builtin_exit(const size_t argc, const char **argv) {
   } else {
     exit_code = EXIT_SUCCESS;
   }
+  save_history();
   exit(exit_code);
   return exit_code;
 }

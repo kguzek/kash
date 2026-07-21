@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/lib/history.h"
 #include "src/lib/vector.h"
 #include "src/repl/executor.h"
 #include "src/repl/io.h"
@@ -19,8 +20,8 @@ int loop() {
     free(input);
     collect_input(&input);
   }
-
   free(input);
+  save_history();
   return EXIT_SUCCESS;
 }
 
