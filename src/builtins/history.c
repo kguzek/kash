@@ -4,28 +4,56 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "src/lib/config.h"
 #include "src/lib/history.h"
+#include "src/lib/strings.h"
 
 int builtin_history(size_t argc, const char *argv[argc]) {
-  HIST_ENTRY **history = get_history_entries();
-  size_t history_size = get_history_size();
   size_t entry_start_idx = 0;
-  if (argc > 1) {
-    if (argc > 2) {
-      fprintf(stderr, "%s: %s: expected at most one optional argument\n",
-              PROGRAM_NAME, argv[0]);
-    }
-    long result = strtol(argv[1], (char **)NULL, 10);
-    if (result < 0) {
-      fprintf(stderr, "%s: %s: expected a nonnegative number\n", PROGRAM_NAME,
-              argv[0]);
-    }
-    if (result >= 0 && result < history_size) {
-      entry_start_idx = history_size - result;
-    }
+  if (argc == 1) {
+    return print_history_list(NULL);
   }
+  const char *command_name = argv[0];
+  const char *option = argv[1];
+  if (strcmp(option, "-r") == 0) {
+    if (argc != 3) {
+      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument",
+              PROGRAM_NAME, command_name, option);
+      return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+  }
+  if (argc > 2) {
+    fprintf(stderr,
+            "%s: %s: expected at most one optional argument, instead "
+            "received %lu\n",
+            PROGRAM_NAME, command_name, argc - 1);
+    return EXIT_FAILURE;
+  }
+  long result = strtol(option, (char **)NULL, 10);
+  if (result == 0 && !is_zero(option)) {
+    fprintf(stderr, "%s: %s: invalid option '%s'\n", PROGRAM_NAME, command_name,
+            option);
+    return EXIT_FAILURE;
+  }
+  if (result < 0) {
+    fprintf(stderr,
+            "%s: %s: expected a nonnegative number, instead received '%s'\n",
+            PROGRAM_NAME, command_name, option);
+    return EXIT_FAILURE;
+  }
+  return print_history_list(&result);
+}
+
+static int print_history_list(long *last_n_entries) {
+  HIST_ENTRY **history = get_history_entries();
+  size_t history_size = history == NULL ? 0 : get_history_size();
+  size_t entry_start_idx =
+      last_n_entries == NULL || *last_n_entries > history_size
+          ? 0
+          : history_size - *last_n_entries;
   HIST_ENTRY *entry;
   for (size_t i = entry_start_idx; i < history_size; i++) {
     entry = history[i];

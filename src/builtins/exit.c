@@ -7,17 +7,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/lib/config.h"
+#include "src/lib/strings.h"
+
 int builtin_exit(const size_t argc, const char **argv) {
+  const char *command_name = argv[0];
   if (argc > 2) {
-    fprintf(stderr, "%s: too many arguments\n", argv[0]);
+    fprintf(stderr, "%s: %s: too many arguments\n", PROGRAM_NAME, command_name);
     return EXIT_FAILURE;
   }
   int exit_code;
   if (argc == 2) {
-    long result = strtol(argv[1], (char **)NULL, 10);
-    if (result == 0 && strcmp(argv[1], "0") != 0) {
-      fprintf(stderr, "%s: expected numeric exit code instead of: '%s'\n",
-              argv[0], argv[1]);
+    const char *option = argv[1];
+    long result = strtol(option, (char **)NULL, 10);
+    if (result == 0 && !is_zero(option)) {
+      fprintf(stderr,
+              "%s: %s: expected numeric exit code, instead received '%s'\n",
+              PROGRAM_NAME, command_name, option);
       return EXIT_FAILURE;
     }
     exit_code = (int)result;

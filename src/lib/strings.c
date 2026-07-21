@@ -40,3 +40,23 @@ char *get_longest_common_prefix(const struct string_vec *strings) {
 int compare_strings(const void *lhs, const void *rhs) {
   return strcmp(*(const char **)lhs, *(const char **)rhs);
 }
+
+bool is_zero(const char *str) {
+  size_t i = 0;
+  char c = str[i];
+  bool seen_decimal = false;
+  do {
+    if (c != '0') {
+      if (c == '.') {
+        if (seen_decimal) {
+          return false;
+        }
+        seen_decimal = true;
+      } else {
+        return false;
+      }
+    }
+    c = str[++i];
+  } while (c != '\0');
+  return true;
+}

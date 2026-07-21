@@ -10,14 +10,16 @@
 #include "src/lib/path.h"
 
 int builtin_type(const size_t argc, const char **argv) {
+  const char *command_name = argv[0];
   if (argc < 2) {
-    fprintf(stderr, ": not found\n");
+    fprintf(stderr, "%s: %s: expected at least one argument\n", PROGRAM_NAME,
+            command_name);
     return 2;
   }
   int exit_code = EXIT_SUCCESS;
   for (size_t i = 1; i < argc; i++) {
     const char *input_command = argv[i];
-    const int result = get_command_type(input_command);
+    const int result = print_command_type(input_command);
     if (result != 0) {
       exit_code = result;
     }
@@ -25,7 +27,7 @@ int builtin_type(const size_t argc, const char **argv) {
   return exit_code;
 }
 
-static int get_command_type(const char *input_command) {
+static int print_command_type(const char *input_command) {
   const char *command_match = NULL;
   for (int i = 0; i < BUILTIN_COMMANDS_LENGTH; i++) {
     const char *builtin_command = BUILTIN_COMMANDS[i];

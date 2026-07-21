@@ -8,9 +8,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "src/lib/config.h"
+
 int builtin_cd(const size_t argc, const char **argv) {
+  const char *command_name = argv[0];
   if (argc > 2) {
-    fprintf(stderr, "%s: too many arguments\n", argv[0]);
+    fprintf(stderr, "%s: %s: too many arguments\n", PROGRAM_NAME, command_name);
     return EXIT_FAILURE;
   }
   const char *chdir_target;
@@ -20,13 +23,15 @@ int builtin_cd(const size_t argc, const char **argv) {
   if (argc < 2 || strcmp(chdir_target, "~") == 0) {
     chdir_target = getenv("HOME");
     if (chdir_target == NULL) {
-      fprintf(stderr, "%s: failed to get home directory\n", argv[0]);
+      fprintf(stderr, "%s: %s: failed to get home directory\n", PROGRAM_NAME,
+              command_name);
       return 2;
     }
   }
   if (chdir(chdir_target) != 0) {
-    // can't use perror: tests require also printing the directory name
-    fprintf(stderr, "%s: %s: %s\n", argv[0], chdir_target, strerror(errno));
+    // tests require this exact error format
+    fprintf(stderr, "%s: %s: %s\n", command_name, chdir_target,
+            strerror(errno));
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

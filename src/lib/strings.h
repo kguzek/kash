@@ -9,5 +9,6 @@
 
 char *get_longest_common_prefix(const struct string_vec *strings);
 int compare_strings(const void *lhs, const void *rhs);
+bool is_zero(const char *str);
 
 #endif  // SRC_LIB_STRINGS_H_
