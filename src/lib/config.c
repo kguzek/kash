@@ -3,9 +3,8 @@
 #include "src/lib/config.h"
 
 const char *PROGRAM_NAME = "kash";
-const char *BUILTIN_COMMANDS[] = {
-    "exit", "echo", "type", "pwd", "cd", "complete", "jobs", "history",
-};
+const char *BUILTIN_COMMANDS[] = {"exit",     "echo", "type",    "pwd",    "cd",
+                                  "complete", "jobs", "history", "declare"};
 
 const int BUILTIN_COMMANDS_LENGTH =
     sizeof(BUILTIN_COMMANDS) / sizeof(BUILTIN_COMMANDS[0]);

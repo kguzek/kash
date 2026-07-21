@@ -11,6 +11,7 @@
 
 #include "src/builtins/cd.h"
 #include "src/builtins/complete.h"
+#include "src/builtins/declare.h"
 #include "src/builtins/echo.h"
 #include "src/builtins/exit.h"
 #include "src/builtins/history.h"
@@ -172,6 +173,9 @@ static int execute_command(const size_t argc, const char *argv[argc],
   }
   if (strcmp(first_word, "history") == 0) {
     return builtin_history(argc, argv);
+  }
+  if (strcmp(first_word, "declare") == 0) {
+    return builtin_declare(argc, argv);
   }
   return try_run_external_program(argc, argv, pid_ptr);
 }
