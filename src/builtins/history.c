@@ -46,6 +46,20 @@ int builtin_history(size_t argc, const char *argv[argc]) {
     }
     return result;
   }
+  if (strcmp(option, "-a") == 0) {
+    if (argc != 3) {
+      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument",
+              PROGRAM_NAME, command_name, option);
+      return EXIT_FAILURE;
+    }
+    const char *path = argv[2];
+    int result = append_history_to_file(path);
+    if (result != EXIT_SUCCESS) {
+      fprintf(stderr, "%s: %s: %s: %s\n", PROGRAM_NAME, command_name, path,
+              strerror(errno));
+    }
+    return result;
+  }
   if (argc > 2) {
     fprintf(stderr,
             "%s: %s: expected at most one optional argument, instead "
