@@ -31,3 +31,8 @@ char *get_full_path(const char *command) {
 
   return NULL;
 }
+
+char *get_home_directory(const char *user) {
+  // TODO(kguzek): support other users
+  return getenv("HOME");
+}

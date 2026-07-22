@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "src/lib/config.h"
+#include "src/lib/path.h"
 #include "src/lib/variables.h"
 #include "src/lib/vector.h"
 
@@ -40,6 +41,19 @@ static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
     }                                                                          \
     ctx->in_double_quotes = !(ctx->in_double_quotes);                          \
     break;
+
+#define COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg)            \
+  if (ctx->starting_new_arg) {                                                 \
+    if (arg_idx > 0) {                                                         \
+      push_back_char(&current_arg, '\0');                                      \
+      cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);                 \
+      free(current_arg);                                                       \
+      current_arg = NULL;                                                      \
+    }                                                                          \
+    ctx->starting_new_arg = false;                                             \
+    arg_idx++;                                                                 \
+  }                                                                            \
+  ctx->starting_new_cmd = false;
 
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
                    struct cmd_parse_ctx *ctx_out) {
@@ -188,14 +202,23 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
       cmd_separators[cmd_idx] = CMD_SEP_BGND;
       goto separate_command;
     separate_command:
-      // NULL-terminate last arg of previous command
-      push_back_char(&current_arg, '\0');
-      cmdv[cmd_idx++][arg_idx - 1] = strdup(current_arg->value);
-      free(current_arg);
-      current_arg = NULL;
+      COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+      cmd_idx++;
       arg_idx = 0;
       ctx->starting_new_arg = true;
       ctx->starting_new_cmd = true;
+      break;
+    case '~':
+      if (char_escaped) {
+        goto copy_char;
+      }
+      char *home_directory = get_home_directory(NULL);
+      COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+      size_t home_dir_size = 0;
+      for (char *h = home_directory; *h != '\0'; h++) {
+        push_back_char(&current_arg, *h);
+        home_dir_size++;
+      }
       break;
     case '$':
       if (ctx->in_single_quotes || ctx->next_char_escaped) {
@@ -219,24 +242,12 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
         memcpy(variable_name, c + variable_start_offset, variable_name_length);
         variable_name[variable_name_length] = '\0';
         char *variable_value = get_variable_value(variable_name);
-        if (ctx->starting_new_arg) {
-          if (cmd_idx > 0 || arg_idx > 0) {
-            push_back_char(&current_arg, '\0');
-            cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
-            free(current_arg);
-            current_arg = NULL;
-          }
-          ctx->starting_new_arg = false;
-          arg_idx++;
-        }
-        ctx->starting_new_cmd = false;
+        COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
         for (char *v = variable_value; *v != '\0'; v++) {
           push_back_char(&current_arg, *v);
         }
         c += variable_start_offset + variable_name_length + variable_end_offset
              - 1;
-        // printf("parsed variable '%s': '%s'\n", variable_name,
-        // variable_value);
       }
       break;
     case ' ':
@@ -251,19 +262,9 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
       break;
     default:
     copy_char:
-      if (ctx->starting_new_arg) {
-        if (arg_idx > 0) {
-          push_back_char(&current_arg, '\0');
-          cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
-          free(current_arg);
-          current_arg = NULL;
-        }
-        ctx->starting_new_arg = false;
-        arg_idx++;
-      }
-      push_back_char(&current_arg, *c);
+      COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg)
       ctx->next_char_escaped = false;
-      ctx->starting_new_cmd = false;
+      push_back_char(&current_arg, *c);
       break;
     }
   }

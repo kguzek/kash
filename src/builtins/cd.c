@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "src/lib/config.h"
+#include "src/lib/path.h"
 
 int builtin_cd(const size_t argc, const char **argv) {
   const char *command_name = argv[0];
@@ -21,7 +22,7 @@ int builtin_cd(const size_t argc, const char **argv) {
     chdir_target = argv[1];
   }
   if (argc < 2 || strcmp(chdir_target, "~") == 0) {
-    chdir_target = getenv("HOME");
+    chdir_target = get_home_directory(NULL);
     if (chdir_target == NULL) {
       fprintf(stderr, "%s: %s: failed to get home directory\n", PROGRAM_NAME,
               command_name);

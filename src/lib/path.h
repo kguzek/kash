@@ -6,5 +6,6 @@
 #include <stddef.h>
 
 char *get_full_path(const char *command);
+char *get_home_directory(const char *user);
 
 #endif  // SRC_LIB_PATH_H_
