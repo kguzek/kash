@@ -7,6 +7,6 @@
 
 int builtin_declare(size_t argc, const char *argv[argc]);
 static int print_declared_variable(const char *command_name,
-                                   const char *variable);
+                                   const char *variable_name);
 
 #endif  // SRC_BUILTINS_DECLARE_H_

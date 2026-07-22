@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "src/lib/jobs.h"
+#include "src/lib/variables.h"
 
 #define VECTOR_DECLARE(name, type)                                             \
   struct name##_vec {                                                          \
@@ -26,6 +27,7 @@
 VECTOR_DECLARE(size_t, size_t);
 PTR_VECTOR_DECLARE(string, char *);
 PTR_VECTOR_DECLARE(job, struct job_definition *);
+PTR_VECTOR_DECLARE(variable, struct variable_definition *);
 
 struct string_pair_vec {
   struct string_vec *keys;

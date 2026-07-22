@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <readline/readline.h>
 
 #include "src/lib/jobs.h"
@@ -58,6 +59,7 @@
 VECTOR_IMPL(size_t, size_t);
 PTR_VECTOR_IMPL(string, char *);
 PTR_VECTOR_IMPL(job, struct job_definition *);
+PTR_VECTOR_IMPL(variable, struct variable_definition *);
 
 static bool string_equal(const char *a, const char *b) {
   return strcmp(a, b) == 0;
@@ -70,6 +72,11 @@ static bool size_t_equal(const size_t a, const size_t b) {
 static bool job_equal(const struct job_definition *a,
                       const struct job_definition *b) {
   return a->id == b->id || a->pid == b->pid;
+}
+
+static bool variable_equal(const struct variable_definition *a,
+                           const struct variable_definition *b) {
+  return a->type == b->type && strcmp(a->name, b->name) == 0;
 }
 
 size_t string_pair_vec_size(const struct string_pair_vec *vec) {
