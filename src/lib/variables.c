@@ -46,6 +46,12 @@ struct variable_vec *get_declared_variables() {
 }
 
 char *get_variable_value(const char *variable_name) {
+  if (strcmp(variable_name, "?") == 0) {
+    char exit_code_str[8];
+    snprintf(exit_code_str, sizeof(exit_code_str), "%d",
+             get_previous_exit_code());
+    return strdup(exit_code_str);
+  }
   size_t variables_size = variable_vec_size(variables);
   struct variable_definition *variable;
   for (size_t i = 0; i < variables_size; i++) {

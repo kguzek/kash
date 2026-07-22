@@ -214,19 +214,19 @@ static int insert_completions(struct string_vec *completions,
       rl_insert_text(prefix + current_token_length);
       free(prefix);
       // inserted partial completion, but list is still ambiguous
-      return EXIT_FAILURE_EXHAUSTIVE;
+      return EXIT_FAILURE;
     }
     free(prefix);
   }
   if (PREVIOUS_AUTOCOMPLETE_INPUT == NULL) {
     PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
-    return EXIT_FAILURE_EXHAUSTIVE;  // completion list is ambiguous
+    return EXIT_FAILURE;  // completion list is ambiguous
   }
   if (strcmp(PREVIOUS_AUTOCOMPLETE_INPUT, rl_line_buffer) != 0) {
     free(PREVIOUS_AUTOCOMPLETE_INPUT);
     PREVIOUS_AUTOCOMPLETE_INPUT = strdup(rl_line_buffer);
     // same as above, but this is not the first completion attempt
-    return EXIT_FAILURE_EXHAUSTIVE;
+    return EXIT_FAILURE;
   }
   printf("\n");
   qsort(completions->value, completions_size, sizeof(first_completion),

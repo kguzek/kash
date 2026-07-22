@@ -85,14 +85,14 @@ int execute_commands(size_t cmdc, const char **cmdv[cmdc],
     }
     if (pids[cmd_idx] == BUILTIN_PID_VALUE) {
       // was not fork+exec'd (e.g. builtin)
-      exit_codes[cmd_idx] = command_result;
+      exit_codes[cmd_idx] = set_previous_exit_code(command_result);
     } else {
       switch (cmd_separators[cmd_idx]) {
       case CMD_SEP_SQTL: {
         int status;
         waitpid(pids[cmd_idx], &status, 0);
-        exit_codes[cmd_idx] =
-            WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+        exit_codes[cmd_idx] = set_previous_exit_code(
+            WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE);
       }; break;
       case CMD_SEP_BGND: {
         size_t argv_bytes = 1;
@@ -111,7 +111,8 @@ int execute_commands(size_t cmdc, const char **cmdv[cmdc],
           job_cmd[arg_offset++] = ' ';
         }
         job_cmd[argv_bytes - 1] = '\0';
-        exit_codes[cmd_idx] = define_job(pids[cmd_idx], job_cmd);
+        exit_codes[cmd_idx] =
+            set_previous_exit_code(define_job(pids[cmd_idx], job_cmd));
       } break;
       default:
         break;
@@ -138,8 +139,8 @@ int execute_commands(size_t cmdc, const char **cmdv[cmdc],
     default: {
       int status;
       waitpid(pid, &status, 0);
-      exit_codes[cmd_idx] =
-          WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE;
+      exit_codes[cmd_idx] = set_previous_exit_code(
+          WIFEXITED(status) ? WEXITSTATUS(status) : EXIT_FAILURE);
     }; break;
     }
   }

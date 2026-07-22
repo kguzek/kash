@@ -347,13 +347,27 @@ static int parse_variable_name_length(const char *char_start,
   const char *char_end = char_start + *variable_start_offset;
   bool seen_brace = false;
   while (*char_end != '\0') {
-    if (*char_end == '{') {
+    bool is_first_char = char_end == char_start + *variable_start_offset;
+    if (*char_end == '?') {
+      if (!is_first_char) {
+        break;
+      }
+      if (!seen_brace) {
+        char_end++;
+        break;
+      }
+      if (*(++char_end) == '}') {
+        continue;
+      }
+      fprintf(stderr, "%s: invalid substitution value\n", PROGRAM_NAME);
+      return EXIT_FAILURE;
+    } else if (*char_end == '{') {
       if (seen_brace) {
         fprintf(stderr, "%s: %c: unexpected nested brace in substitution\n",
                 PROGRAM_NAME, *char_end);
         return EXIT_FAILURE;
       }
-      if (char_end == char_start + *variable_start_offset) {
+      if (is_first_char) {
         // starts parsing "${foo}" as variable "$foo"
         seen_brace = true;
         (*variable_start_offset)++;
