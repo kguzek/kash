@@ -45,6 +45,23 @@ struct variable_vec *get_declared_variables() {
   return variables;
 }
 
+char *get_variable_value(const char *variable_name) {
+  size_t variables_size = variable_vec_size(variables);
+  struct variable_definition *variable;
+  for (size_t i = 0; i < variables_size; i++) {
+    variable = variables->value[i];
+    if (variable == NULL || strcmp(variable_name, variable->name) != 0) {
+      continue;
+    }
+    return variable->value;
+  }
+  return "";
+}
+
+bool is_valid_variable_char(const char c) {
+  return is_letter_or_underscore(c) || is_digit(c);
+}
+
 static int upsert_variable(struct variable_definition *variable) {
   size_t variables_size = variable_vec_size(variables);
   struct variable_definition *current;
@@ -65,7 +82,7 @@ static bool is_valid_variable_name(const char *name) {
     return false;
   }
   for (const char *c = name; *c != '\0'; c++) {
-    if (is_letter_or_underscore(*c) || is_digit(*c)) {
+    if (is_valid_variable_char(*c)) {
       continue;
     }
     return false;
