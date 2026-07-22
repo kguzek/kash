@@ -30,7 +30,22 @@ int declare_variable(const char *command_name, const char *type_option,
   *(value++) = '\0';
   variable->name = name;
   variable->value = value;
-  return push_back_variable_unique(&variables, variable);
+  return upsert_variable(variable);
+}
+
+static int upsert_variable(struct variable_definition *variable) {
+  size_t variables_size = variable_vec_size(variables);
+  struct variable_definition *current;
+  for (size_t i = 0; i < variables_size; i++) {
+    current = variables->value[i];
+    if (current == NULL || !variable_equal(variable, current)) {
+      continue;
+    }
+    free(current);
+    variables->value[i] = variable;
+    return EXIT_SUCCESS;
+  }
+  return push_back_variable(&variables, variable);
 }
 
 struct variable_vec *get_declared_variables() {

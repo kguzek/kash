@@ -15,6 +15,7 @@ struct variable_definition {
 
 int declare_variable(const char *command_name, const char *type_option,
                      const char *declaration);
+static int upsert_variable(struct variable_definition *variable);
 struct variable_vec *get_declared_variables();
 
 #endif  // SRC_LIB_VARIABLES_H_

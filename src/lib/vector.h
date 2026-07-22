@@ -18,7 +18,7 @@
   size_t name##_vec_size(const struct name##_vec *vec);                        \
   int push_back_##name(struct name##_vec **vec_ptr, type value);               \
   int push_back_##name##_unique(struct name##_vec **vec_ptr, type value);      \
-  static bool name##_equal(const type a, const type b);
+  bool name##_equal(const type a, const type b);
 
 #define PTR_VECTOR_DECLARE(name, type)                                         \
   VECTOR_DECLARE(name, type);                                                  \

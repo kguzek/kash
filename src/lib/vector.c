@@ -61,21 +61,20 @@ PTR_VECTOR_IMPL(string, char *);
 PTR_VECTOR_IMPL(job, struct job_definition *);
 PTR_VECTOR_IMPL(variable, struct variable_definition *);
 
-static bool string_equal(const char *a, const char *b) {
+bool string_equal(const char *a, const char *b) {
   return strcmp(a, b) == 0;
 }
 
-static bool size_t_equal(const size_t a, const size_t b) {
+bool size_t_equal(const size_t a, const size_t b) {
   return a == b;
 }
 
-static bool job_equal(const struct job_definition *a,
-                      const struct job_definition *b) {
+bool job_equal(const struct job_definition *a, const struct job_definition *b) {
   return a->id == b->id || a->pid == b->pid;
 }
 
-static bool variable_equal(const struct variable_definition *a,
-                           const struct variable_definition *b) {
+bool variable_equal(const struct variable_definition *a,
+                    const struct variable_definition *b) {
   return a->type == b->type && strcmp(a->name, b->name) == 0;
 }
 
