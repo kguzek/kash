@@ -72,7 +72,7 @@ static int print_registratered_spec_paths(const char *command_name,
   size_t spec_paths_size =
       populate_registered_completion_specs(cmd, &spec_paths);
   if (spec_paths_size == 0) {
-    // tests require this exact error format
+    // TODO(kguzek): tests require this exact error format
     fprintf(stderr, "%s: %s: no completion specification\n", command_name, cmd);
     return EXIT_FAILURE;
   }

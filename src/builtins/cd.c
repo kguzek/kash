@@ -29,7 +29,7 @@ int builtin_cd(const size_t argc, const char **argv) {
     }
   }
   if (chdir(chdir_target) != 0) {
-    // tests require this exact error format
+    // TODO(kguzek): tests require this exact error format
     fprintf(stderr, "%s: %s: %s\n", command_name, chdir_target,
             strerror(errno));
     return EXIT_FAILURE;

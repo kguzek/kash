@@ -25,12 +25,24 @@ int declare_variable(const char *command_name, const char *type_option,
   if (value == NULL) {
     fprintf(stderr, "%s: %s: invalid variable declaration '%s'\n", PROGRAM_NAME,
             command_name, declaration);
+    free(variable);
     return EXIT_FAILURE;
   }
   *(value++) = '\0';
+  if (!is_valid_variable_name(name)) {
+    // tests require this exact error format
+    fprintf(stderr, "%s: `%s': not a valid identifier\n", command_name,
+            declaration);
+    free(variable);
+    return EXIT_FAILURE;
+  }
   variable->name = name;
   variable->value = value;
   return upsert_variable(variable);
+}
+
+struct variable_vec *get_declared_variables() {
+  return variables;
 }
 
 static int upsert_variable(struct variable_definition *variable) {
@@ -48,6 +60,32 @@ static int upsert_variable(struct variable_definition *variable) {
   return push_back_variable(&variables, variable);
 }
 
-struct variable_vec *get_declared_variables() {
-  return variables;
+static bool is_valid_variable_name(const char *name) {
+  if (!is_letter_or_underscore(name[0])) {
+    return false;
+  }
+  for (const char *c = name; *c != '\0'; c++) {
+    if (is_letter_or_underscore(*c) || is_digit(*c)) {
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+static bool is_letter_or_underscore(const char c) {
+  if (c == '_') {
+    return true;
+  }
+  if (c >= 'a' && c <= 'z') {
+    return true;
+  }
+  if (c >= 'A' && c <= 'Z') {
+    return true;
+  }
+  return false;
+}
+
+static bool is_digit(const char c) {
+  return c >= '0' && c <= '9';
 }
