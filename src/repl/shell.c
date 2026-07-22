@@ -48,12 +48,19 @@ static int process_input(char *input) {
   }
   enum COMMAND_SEPARATOR cmd_separators[cmdc];
   size_t *argcv = argc_vec->value;
-  const char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
+  char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
   if (cmdv == NULL) {
     free(argc_vec);
     return EXIT_FAILURE;
   }
-  function_result = execute_commands(cmdc, cmdv, cmd_separators, argcv);
+  function_result =
+      execute_commands(cmdc, (const char ***)cmdv, cmd_separators, argcv);
+  for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
+    for (size_t argi = 0; argi < argcv[cmdi]; argi++) {
+      free(cmdv[cmdi][argi]);
+    }
+  }
+  free(cmdv);
   free(argc_vec);
   if (redirection != NULL) {
     reset_output();

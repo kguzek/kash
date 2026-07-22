@@ -136,23 +136,21 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
   return EXIT_SUCCESS;
 }
 
-const char ***
-allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
-              enum COMMAND_SEPARATOR cmd_separators[restrict cmdc]) {
+char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
+                      enum COMMAND_SEPARATOR cmd_separators[cmdc]) {
   size_t total_args = 0;
   for (size_t i = 0; i < cmdc; i++) {
     // TODO(kguzek): add +1 if we use NULL terminators in future
     total_args += argcv[i];
   }
-  const char ***cmdv =
-      malloc(cmdc * sizeof(*cmdv) + total_args * sizeof(**cmdv));
+  char ***cmdv = malloc(cmdc * sizeof(*cmdv) + total_args * sizeof(**cmdv));
   if (cmdv == NULL) {
     perror("malloc");
     return NULL;
   }
   // this sets the first-dimension indices (i.e. cmdv[0..cmdc])
   // as pointers to the appropriate command argv's starting index
-  const char **argv_storage = (const char **)(cmdv + cmdc);
+  char **argv_storage = (char **)(cmdv + cmdc);
   for (size_t i = 0; i < cmdc; i++) {
     cmd_separators[i] = CMD_SEP_NONE;
     cmdv[i] = argv_storage;
@@ -160,14 +158,13 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
     argv_storage += argcv[i];
   }
 
-  const char *input_copy = strdup(input);
   size_t cmd_idx = 0, arg_idx = 0, input_idx = 0;
 
   struct cmd_parse_ctx ctx_local;
   struct cmd_parse_ctx *ctx = &ctx_local;
   initialize_cmd_parse_ctx(ctx);
   struct char_vec *current_arg = NULL;
-  for (const char *c = input_copy; *c != '\0'; c++) {
+  for (const char *c = input; *c != '\0'; c++) {
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
     switch (*c) {
@@ -193,7 +190,9 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
     separate_command:
       // NULL-terminate last arg of previous command
       push_back_char(&current_arg, '\0');
-      cmd_idx++;
+      cmdv[cmd_idx++][arg_idx - 1] = strdup(current_arg->value);
+      free(current_arg);
+      current_arg = NULL;
       arg_idx = 0;
       ctx->starting_new_arg = true;
       ctx->starting_new_cmd = true;
@@ -252,7 +251,7 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
     default:
     copy_char:
       if (ctx->starting_new_arg) {
-        if (cmd_idx > 0 || arg_idx > 0) {
+        if (arg_idx > 0) {
           push_back_char(&current_arg, '\0');
           cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
           free(current_arg);
@@ -267,11 +266,24 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
     }
   }
   // ensure final arg is also NULL-terminated
-  push_back_char(&current_arg, '\0');
-  cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
+  if (!ctx->starting_new_arg) {
+    push_back_char(&current_arg, '\0');
+    cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
+  }
   if (current_arg != NULL) {
     free(current_arg);
   }
+  // for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
+  //   for (size_t argi = 0; argi < argcv[cmdi]; argi++) {
+  //     printf("%s ", cmdv[cmdi][argi]);
+  //   }
+  //   enum COMMAND_SEPARATOR sep = cmd_separators[cmdi];
+  //   printf("(%s) \n", sep == CMD_SEP_PIPE   ? "pipe"
+  //                     : sep == CMD_SEP_BGND ? "bgnd"
+  //                     : sep == CMD_SEP_SQTL ? "sqtl"
+  //                     : sep == CMD_SEP_NONE ? "none"
+  //                                           : "unknown");
+  // }
   return cmdv;
 }
 

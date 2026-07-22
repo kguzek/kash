@@ -67,6 +67,7 @@ int print_updated_jobs_list(bool print_all_jobs) {
     printf("[%lu]%c  %s%s%s\n", job->id, job_indicator, job_status,
            status_padding, job->cmd);
     if (job->status == JOB_STATUS_DONE) {
+      free((char *)job->cmd);
       free(job);
       // TODO(kguzek): remove job from table
       jobs->value[i] = NULL;

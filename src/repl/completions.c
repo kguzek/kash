@@ -83,7 +83,7 @@ int autocomplete(int count, int key) {
   }
   enum COMMAND_SEPARATOR cmd_separators[cmdc];
   size_t *argcv = argc_vec->value;
-  const char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
+  char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
   if (cmdv == NULL) {
     free(argc_vec);
     free(input);
@@ -99,7 +99,7 @@ int autocomplete(int count, int key) {
     // TODO(kguzek): allow completions at any cursor position; assuming last cmd
     size_t cmdi = cmdc - 1;
     const size_t argc = argcv[cmdi];
-    const char **argv = cmdv[cmdi];
+    const char **argv = (const char **)cmdv[cmdi];
     const char *cmd = argv[0], *previous_token = "";
 
     if (argc > 0 && (parse_ctx.starting_new_arg)) {
@@ -124,6 +124,11 @@ int autocomplete(int count, int key) {
                                                previous_token);
         break;
       }
+    }
+  }
+  for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
+    for (size_t argi = 0; argi < argcv[cmdi]; argi++) {
+      free(cmdv[cmdi][argi]);
     }
   }
 

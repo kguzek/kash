@@ -25,8 +25,8 @@
 
 #define BUILTIN_PID_VALUE 0
 
-int execute_commands(size_t cmdc, const char **cmdv[restrict cmdc],
-                     const enum COMMAND_SEPARATOR cmd_separators[restrict cmdc],
+int execute_commands(size_t cmdc, const char **cmdv[cmdc],
+                     const enum COMMAND_SEPARATOR cmd_separators[cmdc],
                      const size_t argcv[]) {
   if (cmd_separators[cmdc - 1] == CMD_SEP_PIPE) {
     // sanity check; parser ensures this
