@@ -40,5 +40,16 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
 int handle_redirection(char *input, char *redirection);
 static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx);
 static const bool is_escapable_in_double_quotes(const char c);
+/** Tokenizes the input string starting at `variable_start_offset` bytes after
+ * `char_start`, and stops parsing when it encounters a non-variable-name
+ * character. Adjusts the value pointed at by `variable_start_offset` if needed,
+ * and sets the value at `length_out` to the final length of the variable name,
+ * such that `*(char_start + *variable_start_offset)` produces the first
+ * character of the variable name, and `*(char_start + *variable_start_offset +
+ * *length_out)` is the first character after the variable name.
+ * Returns `EXIT_SUCCESS` on success and `EXIT_FAILURE` on failure. */
+static int parse_variable_name_length(const char *char_start,
+                                      size_t *variable_start_offset,
+                                      size_t *length_out);
 
 #endif  // SRC_REPL_PARSER_H_

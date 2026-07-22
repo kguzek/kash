@@ -7,14 +7,22 @@
 #include <string.h>
 
 #include "src/lib/config.h"
+#include "src/lib/variables.h"
 
-#define IS_BACKSLASH_ESCAPED(ctx)                                              \
-  ctx->in_single_quotes || ctx->next_char_escaped                              \
-      || (ctx->in_double_quotes && (!is_escapable_in_double_quotes(*(c + 1))))
+static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
+  if (ctx->in_single_quotes || ctx->next_char_escaped) {
+    return true;
+  }
+  if (!ctx->in_double_quotes) {
+    return false;
+  }
+  const char next_char = *(c + 1);
+  return !is_escapable_in_double_quotes(next_char);
+}
 
-#define HANDLE_QUOTES_AND_ESCAPES(ctx, label)                                  \
+#define HANDLE_QUOTES_AND_ESCAPES(ctx, c, label)                               \
   case '\\':                                                                   \
-    if (IS_BACKSLASH_ESCAPED(ctx)) {                                           \
+    if (is_backslash_escaped(ctx, c)) {                                        \
       goto label;                                                              \
     }                                                                          \
     ctx->next_char_escaped = true;                                             \
@@ -43,7 +51,7 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
     switch (*c) {
-      HANDLE_QUOTES_AND_ESCAPES(ctx, handle_other_char);
+      HANDLE_QUOTES_AND_ESCAPES(ctx, c, handle_other_char);
     case ';':
       if (char_escaped) {
         goto handle_other_char;
@@ -54,10 +62,8 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
         }
         return EXIT_FAILURE;
       }
-      ctx->starting_new_cmd = true;
-      ctx->starting_new_arg = true;
       last_command_separator = ';';
-      break;
+      goto separate_command;
     case '|':
       if (char_escaped) {
         goto handle_other_char;
@@ -68,10 +74,8 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
         }
         return EXIT_FAILURE;
       }
-      ctx->starting_new_cmd = true;
-      ctx->starting_new_arg = true;
       last_command_separator = '|';
-      break;
+      goto separate_command;
     case '&':
       if (char_escaped) {
         goto handle_other_char;
@@ -83,9 +87,11 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
         }
         return EXIT_FAILURE;
       }
+      last_command_separator = '&';
+      goto separate_command;
+    separate_command:
       ctx->starting_new_cmd = true;
       ctx->starting_new_arg = true;
-      last_command_separator = '&';
       break;
     case ' ':
       if (!char_escaped) {
@@ -163,45 +169,58 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
     switch (*c) {
-      HANDLE_QUOTES_AND_ESCAPES(ctx, copy_char);
+      HANDLE_QUOTES_AND_ESCAPES(ctx, c, copy_char);
     case ';':
       if (char_escaped) {
         goto copy_char;
       }
-      // NULL-terminate last arg of previous command
-      input[input_idx++] = '\0';
-      arg_idx = 0;
       cmd_separators[cmd_idx++] = CMD_SEP_SQTL;
-      ctx->starting_new_arg = true;
-      ctx->starting_new_cmd = true;
-      break;
+      goto separate_command;
     case '|':
       if (char_escaped) {
         goto copy_char;
       }
-      // NULL-terminate last arg of previous command
-      input[input_idx++] = '\0';
-      arg_idx = 0;
       cmd_separators[cmd_idx++] = CMD_SEP_PIPE;
-      ctx->starting_new_arg = true;
-      ctx->starting_new_cmd = true;
-      break;
+      goto separate_command;
     case '&':
       if (char_escaped) {
         goto copy_char;
       }
+      cmd_separators[cmd_idx++] = CMD_SEP_BGND;
+      goto separate_command;
+    separate_command:
+      // NULL-terminate last arg of previous command
       input[input_idx++] = '\0';
       arg_idx = 0;
-      cmd_separators[cmd_idx++] = CMD_SEP_BGND;
       ctx->starting_new_arg = true;
       ctx->starting_new_cmd = true;
       break;
+    case '$':
+      if (char_escaped) {
+        goto copy_char;
+      }
+      size_t variable_name_length = 0, variable_start_offset = 1;
+      const int result = parse_variable_name_length(c, &variable_start_offset,
+                                                    &variable_name_length);
+      if (result != EXIT_SUCCESS) {
+        free(cmdv);
+        return NULL;
+      }
+      {
+        char variable_name[variable_name_length + 1];
+        memcpy(variable_name, c + variable_start_offset, variable_name_length);
+        variable_name[variable_name_length] = '\0';
+        char *variable_value = get_variable_value(variable_name);
+        // printf("parsed variable '%s': '%s'\n", variable_name,
+        // variable_value);
+      }
+      goto copy_char;
     case ' ':
       if (char_escaped) {
         goto copy_char;
       }
       if (ctx->starting_new_arg) {
-        break;  // repeated space: no-op
+        break;  // repeated unquoted space: no-op
       }
       // first unquoted space: copy NULL-terminated arg
       input[input_idx++] = '\0';
@@ -274,4 +293,45 @@ static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx) {
 
 static const bool is_escapable_in_double_quotes(const char c) {
   return c == '\\' || c == '"';
+}
+
+static int parse_variable_name_length(const char *char_start,
+                                      size_t *variable_start_offset,
+                                      size_t *length_out) {
+  const char *char_end = char_start + *variable_start_offset;
+  bool seen_brace = false;
+  while (*char_end != '\0') {
+    if (*char_end == '{') {
+      if (seen_brace) {
+        fprintf(stderr, "%s: %c: unexpected nested brace in substitution\n",
+                PROGRAM_NAME, *char_end);
+        return EXIT_FAILURE;
+      }
+      if (char_end == char_start + *variable_start_offset) {
+        // starts parsing "${foo}" as variable "$foo"
+        seen_brace = true;
+        (*variable_start_offset)++;
+      } else {
+        // parses "$foo{bar}" as variable "$foo" and literal "{bar}"
+        break;
+      }
+    } else if (*char_end == '}') {
+      // if (!seen_brace) {
+      //   fprintf(stderr, "%s: %c: unmatched closing brace in substitution\n",
+      //           PROGRAM_NAME, *cc);
+      // }
+      seen_brace = false;
+      break;
+    } else if (!is_valid_variable_char(*char_end)) {
+      break;
+    }
+    char_end++;
+  }
+  if (seen_brace) {
+    fprintf(stderr, "%s: {: unmatched opening brace in substitution\n",
+            PROGRAM_NAME);
+    return EXIT_FAILURE;
+  }
+  *length_out = char_end - char_start - *variable_start_offset;
+  return EXIT_SUCCESS;
 }
