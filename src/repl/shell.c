@@ -2,25 +2,55 @@
 
 #include "src/repl/shell.h"
 
+#include <errno.h>
+#include <setjmp.h>
+#include <signal.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
+#include "src/lib/config.h"
 #include "src/lib/history.h"
 #include "src/lib/vector.h"
 #include "src/repl/executor.h"
 #include "src/repl/io.h"
 #include "src/repl/parser.h"
 
+sigjmp_buf ctrlc_buf;
+
+int interrupt_input() {
+  write(STDOUT_FILENO, "\n", 1);
+  siglongjmp(ctrlc_buf, 1);
+  return EXIT_SUCCESS;
+}
+
+static void sigint_handler(int signo) {
+  switch (signo) {
+  case SIGINT:
+    interrupt_input();
+    break;
+  default:
+    break;
+  }
+}
+
 int loop() {
-  char *input = prepare_input();
-  while (input != NULL) {
+  if (signal(SIGINT, sigint_handler) == SIG_ERR) {
+    fprintf(stderr, "%s: sigint handler: %s\n", PROGRAM_NAME, strerror(errno));
+  }
+  prepare_input();
+  char *input = NULL;
+  while (true) {
+    while (sigsetjmp(ctrlc_buf, 1) != 0) {}
+    collect_input(&input);
+    if (input == NULL) {
+      break;
+    }
     process_input(input);
     free(input);
-    collect_input(&input);
   }
-  free(input);
   save_history();
   return EXIT_SUCCESS;
 }
