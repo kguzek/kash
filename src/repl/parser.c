@@ -229,6 +229,7 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
           ctx->starting_new_arg = false;
           arg_idx++;
         }
+        ctx->starting_new_cmd = false;
         for (char *v = variable_value; *v != '\0'; v++) {
           push_back_char(&current_arg, *v);
         }
@@ -262,11 +263,12 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
       }
       push_back_char(&current_arg, *c);
       ctx->next_char_escaped = false;
+      ctx->starting_new_cmd = false;
       break;
     }
   }
   // ensure final arg is also NULL-terminated
-  if (!ctx->starting_new_arg) {
+  if (!ctx->starting_new_cmd) {
     push_back_char(&current_arg, '\0');
     cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
   }

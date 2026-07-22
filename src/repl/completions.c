@@ -84,9 +84,9 @@ int autocomplete(int count, int key) {
   enum COMMAND_SEPARATOR cmd_separators[cmdc];
   size_t *argcv = argc_vec->value;
   char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
+  free(input);
   if (cmdv == NULL) {
     free(argc_vec);
-    free(input);
     return EXIT_FAILURE;
   }
   struct string_vec *completions = NULL;
