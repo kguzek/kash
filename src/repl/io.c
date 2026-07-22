@@ -24,9 +24,21 @@ int prepare_input() {
   return result;
 }
 
+static char *read_single_line() {
+  char *line = NULL;
+  size_t n = 0;
+  ssize_t len = getline(&line, &n, stdin);
+  if (len == -1) {
+    return NULL;
+  }
+  return line;
+}
+
 size_t collect_input(char **input) {
   print_updated_jobs_list(false);
-  char *result = readline("$ ");
+
+  char *result =
+      isatty(STDIN_FILENO) == 1 ? readline("$ ") : read_single_line();
   if (result == NULL) {
     *input = NULL;
     return 0;
