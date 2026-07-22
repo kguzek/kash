@@ -50,6 +50,7 @@ static const bool is_escapable_in_double_quotes(const char c);
  * Returns `EXIT_SUCCESS` on success and `EXIT_FAILURE` on failure. */
 static int parse_variable_name_length(const char *char_start,
                                       size_t *variable_start_offset,
+                                      size_t *variable_end_offset,
                                       size_t *length_out);
 
 #endif  // SRC_REPL_PARSER_H_

@@ -199,28 +199,46 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
       ctx->starting_new_cmd = true;
       break;
     case '$':
-      if (char_escaped) {
+      if (ctx->in_single_quotes || ctx->next_char_escaped) {
         goto copy_char;
       }
-      size_t variable_name_length = 0, variable_start_offset = 1;
+      size_t variable_name_length = 0, variable_start_offset = 1,
+             variable_end_offset = 0;
       const int result = parse_variable_name_length(c, &variable_start_offset,
+                                                    &variable_end_offset,
                                                     &variable_name_length);
       if (result != EXIT_SUCCESS) {
         free(cmdv);
         return NULL;
+      }
+      if (variable_name_length == 0 && variable_end_offset == 0) {
+        // matches e.g. "$.", "$/" but not "${}"
+        goto copy_char;
       }
       {
         char variable_name[variable_name_length + 1];
         memcpy(variable_name, c + variable_start_offset, variable_name_length);
         variable_name[variable_name_length] = '\0';
         char *variable_value = get_variable_value(variable_name);
-        // for (char *v = variable_value; *v != '\0'; v++) {
-        //   push_back_char(&current_arg, *v);
-        // }
+        if (ctx->starting_new_arg) {
+          if (cmd_idx > 0 || arg_idx > 0) {
+            push_back_char(&current_arg, '\0');
+            cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
+            free(current_arg);
+            current_arg = NULL;
+          }
+          ctx->starting_new_arg = false;
+          arg_idx++;
+        }
+        for (char *v = variable_value; *v != '\0'; v++) {
+          push_back_char(&current_arg, *v);
+        }
+        c += variable_start_offset + variable_name_length + variable_end_offset
+             - 1;
         // printf("parsed variable '%s': '%s'\n", variable_name,
         // variable_value);
       }
-      goto copy_char;
+      break;
     case ' ':
       if (char_escaped) {
         goto copy_char;
@@ -310,6 +328,7 @@ static const bool is_escapable_in_double_quotes(const char c) {
 
 static int parse_variable_name_length(const char *char_start,
                                       size_t *variable_start_offset,
+                                      size_t *variable_end_offset,
                                       size_t *length_out) {
   const char *char_end = char_start + *variable_start_offset;
   bool seen_brace = false;
@@ -329,10 +348,12 @@ static int parse_variable_name_length(const char *char_start,
         break;
       }
     } else if (*char_end == '}') {
-      // if (!seen_brace) {
-      //   fprintf(stderr, "%s: %c: unmatched closing brace in substitution\n",
-      //           PROGRAM_NAME, *cc);
-      // }
+      if (seen_brace) {
+        (*variable_end_offset)++;
+      } else {
+        // fprintf(stderr, "%s: %c: unmatched closing brace in substitution\n",
+        //         PROGRAM_NAME, *char_end);
+      }
       seen_brace = false;
       break;
     } else if (!is_valid_variable_char(*char_end)) {
