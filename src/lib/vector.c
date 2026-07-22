@@ -57,6 +57,7 @@
   VECTOR_IMPL(name, type);
 
 VECTOR_IMPL(size_t, size_t);
+VECTOR_IMPL(char, char);
 PTR_VECTOR_IMPL(string, char *);
 PTR_VECTOR_IMPL(job, struct job_definition *);
 PTR_VECTOR_IMPL(variable, struct variable_definition *);
@@ -66,6 +67,10 @@ bool string_equal(const char *a, const char *b) {
 }
 
 bool size_t_equal(const size_t a, const size_t b) {
+  return a == b;
+}
+
+bool char_equal(const char a, const char b) {
   return a == b;
 }
 

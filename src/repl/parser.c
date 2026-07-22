@@ -8,6 +8,7 @@
 
 #include "src/lib/config.h"
 #include "src/lib/variables.h"
+#include "src/lib/vector.h"
 
 static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
   if (ctx->in_single_quotes || ctx->next_char_escaped) {
@@ -94,10 +95,10 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
       ctx->starting_new_arg = true;
       break;
     case ' ':
-      if (!char_escaped) {
-        ctx->starting_new_arg = true;
+      if (char_escaped) {
+        goto handle_other_char;
       }
-      ctx->next_char_escaped = false;
+      ctx->starting_new_arg = true;
       break;
     default:
     handle_other_char:
@@ -165,6 +166,7 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
   struct cmd_parse_ctx ctx_local;
   struct cmd_parse_ctx *ctx = &ctx_local;
   initialize_cmd_parse_ctx(ctx);
+  struct char_vec *current_arg = NULL;
   for (const char *c = input_copy; *c != '\0'; c++) {
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
@@ -174,23 +176,24 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
       if (char_escaped) {
         goto copy_char;
       }
-      cmd_separators[cmd_idx++] = CMD_SEP_SQTL;
+      cmd_separators[cmd_idx] = CMD_SEP_SQTL;
       goto separate_command;
     case '|':
       if (char_escaped) {
         goto copy_char;
       }
-      cmd_separators[cmd_idx++] = CMD_SEP_PIPE;
+      cmd_separators[cmd_idx] = CMD_SEP_PIPE;
       goto separate_command;
     case '&':
       if (char_escaped) {
         goto copy_char;
       }
-      cmd_separators[cmd_idx++] = CMD_SEP_BGND;
+      cmd_separators[cmd_idx] = CMD_SEP_BGND;
       goto separate_command;
     separate_command:
       // NULL-terminate last arg of previous command
-      input[input_idx++] = '\0';
+      push_back_char(&current_arg, '\0');
+      cmd_idx++;
       arg_idx = 0;
       ctx->starting_new_arg = true;
       ctx->starting_new_cmd = true;
@@ -211,6 +214,9 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
         memcpy(variable_name, c + variable_start_offset, variable_name_length);
         variable_name[variable_name_length] = '\0';
         char *variable_value = get_variable_value(variable_name);
+        // for (char *v = variable_value; *v != '\0'; v++) {
+        //   push_back_char(&current_arg, *v);
+        // }
         // printf("parsed variable '%s': '%s'\n", variable_name,
         // variable_value);
       }
@@ -222,24 +228,31 @@ allocate_cmdv(size_t cmdc, const size_t argcv[restrict cmdc], char *input,
       if (ctx->starting_new_arg) {
         break;  // repeated unquoted space: no-op
       }
-      // first unquoted space: copy NULL-terminated arg
-      input[input_idx++] = '\0';
+      // first unquoted space
       ctx->starting_new_arg = true;
       break;
     default:
     copy_char:
       if (ctx->starting_new_arg) {
-        cmdv[cmd_idx][arg_idx++] = input + input_idx;
+        if (cmd_idx > 0 || arg_idx > 0) {
+          push_back_char(&current_arg, '\0');
+          cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
+          free(current_arg);
+          current_arg = NULL;
+        }
         ctx->starting_new_arg = false;
+        arg_idx++;
       }
-      input[input_idx++] = *c;
+      push_back_char(&current_arg, *c);
       ctx->next_char_escaped = false;
       break;
     }
   }
-  if (!(ctx->starting_new_arg)) {
-    // ensure final arg is also NULL-terminated
-    input[input_idx++] = '\0';
+  // ensure final arg is also NULL-terminated
+  push_back_char(&current_arg, '\0');
+  cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
+  if (current_arg != NULL) {
+    free(current_arg);
   }
   return cmdv;
 }

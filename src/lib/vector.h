@@ -25,6 +25,7 @@
   int free_##name##_vec(struct name##_vec *vec);
 
 VECTOR_DECLARE(size_t, size_t);
+VECTOR_DECLARE(char, char);
 PTR_VECTOR_DECLARE(string, char *);
 PTR_VECTOR_DECLARE(job, struct job_definition *);
 PTR_VECTOR_DECLARE(variable, struct variable_definition *);
