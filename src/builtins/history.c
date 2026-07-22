@@ -20,7 +20,7 @@ int builtin_history(size_t argc, const char *argv[argc]) {
   const char *option = argv[1];
   if (strcmp(option, "-r") == 0) {
     if (argc != 3) {
-      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument",
+      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument\n",
               PROGRAM_NAME, command_name, option);
       return EXIT_FAILURE;
     }
@@ -34,7 +34,7 @@ int builtin_history(size_t argc, const char *argv[argc]) {
   }
   if (strcmp(option, "-w") == 0) {
     if (argc != 3) {
-      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument",
+      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument\n",
               PROGRAM_NAME, command_name, option);
       return EXIT_FAILURE;
     }
@@ -48,7 +48,7 @@ int builtin_history(size_t argc, const char *argv[argc]) {
   }
   if (strcmp(option, "-a") == 0) {
     if (argc != 3) {
-      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument",
+      fprintf(stderr, "%s: %s: %s: expected exactly one filename argument\n",
               PROGRAM_NAME, command_name, option);
       return EXIT_FAILURE;
     }

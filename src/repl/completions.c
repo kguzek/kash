@@ -126,13 +126,13 @@ int autocomplete(int count, int key) {
       }
     }
   }
+
+  result = insert_completions(completions, &parse_ctx, current_token);
   for (size_t cmdi = 0; cmdi < cmdc; cmdi++) {
     for (size_t argi = 0; argi < argcv[cmdi]; argi++) {
       free(cmdv[cmdi][argi]);
     }
   }
-
-  result = insert_completions(completions, &parse_ctx, current_token);
 
   free_string_vec(completions);
   if (completions != NULL) {
