@@ -3,6 +3,8 @@
 #ifndef SRC_LIB_VARIABLES_H_
 #define SRC_LIB_VARIABLES_H_
 
+#include <stdbool.h>
+
 enum VARIABLE_TYPE {
   VAR_TYPE_STRING,
 };

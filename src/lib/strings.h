@@ -3,6 +3,7 @@
 #ifndef SRC_LIB_STRINGS_H_
 #define SRC_LIB_STRINGS_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "src/lib/vector.h"

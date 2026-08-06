@@ -3,6 +3,7 @@
 #ifndef SRC_REPL_PARSER_H_
 #define SRC_REPL_PARSER_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "src/lib/vector.h"

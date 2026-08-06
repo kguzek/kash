@@ -3,6 +3,7 @@
 #ifndef SRC_LIB_JOBS_H_
 #define SRC_LIB_JOBS_H_
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 enum JOB_STATUS {
