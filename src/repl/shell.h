@@ -4,6 +4,6 @@
 #define SRC_REPL_SHELL_H_
 
 int loop();
-static int process_input(char *input);
+int process_input(char *input);
 
 #endif  // SRC_REPL_SHELL_H_

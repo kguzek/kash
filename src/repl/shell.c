@@ -55,7 +55,7 @@ int loop() {
   return EXIT_SUCCESS;
 }
 
-static int process_input(char *input) {
+int process_input(char *input) {
   char *redirection = strstr(input, ">");
   int redirection_result = handle_redirection(input, redirection);
   if (redirection_result != EXIT_SUCCESS) {
