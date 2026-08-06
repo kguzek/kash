@@ -19,6 +19,7 @@
 #include "src/builtins/pwd.h"
 #include "src/builtins/type.h"
 #include "src/lib/config.h"
+#include "src/lib/error_handling.h"
 #include "src/lib/jobs.h"
 #include "src/lib/path.h"
 #include "src/lib/vector.h"
@@ -30,8 +31,7 @@ int execute_commands(size_t cmdc, const char **cmdv[cmdc],
                      const size_t argcv[]) {
   if (cmd_separators[cmdc - 1] == CMD_SEP_PIPE) {
     // sanity check; parser ensures this
-    fprintf(stderr, "%s: |: final pipeline command has no target\n",
-            PROGRAM_NAME);
+    print_error("|: final pipeline command has no target");
     return EXIT_FAILURE;
   }
 
@@ -217,8 +217,7 @@ int run_external_program(const size_t argc, const char *argv[argc],
       }
     }
     execv(program_path, argv_copy);
-    fprintf(stderr, "%s: '%s': %s", PROGRAM_NAME, program_path,
-            strerror(errno));
+    print_error_syscall("%s", program_path);
     // https://stackoverflow.com/a/2329754
     _Exit(EXIT_FAILURE);
   default:
