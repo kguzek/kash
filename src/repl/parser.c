@@ -22,7 +22,7 @@ static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
   return !is_escapable_in_double_quotes(next_char);
 }
 
-#define HANDLE_QUOTES_AND_ESCAPES(ctx, c, label)                               \
+#define HANDLE_QUOTES_AND_ESCAPES(ctx, c, label, quotes_label)                 \
   case '\\':                                                                   \
     if (is_backslash_escaped(ctx, c)) {                                        \
       goto label;                                                              \
@@ -34,13 +34,13 @@ static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
       goto label;                                                              \
     }                                                                          \
     ctx->in_single_quotes = !(ctx->in_single_quotes);                          \
-    break;                                                                     \
+    goto quotes_label;                                                         \
   case '"':                                                                    \
     if (ctx->in_single_quotes || ctx->next_char_escaped) {                     \
       goto label;                                                              \
     }                                                                          \
     ctx->in_double_quotes = !(ctx->in_double_quotes);                          \
-    break;
+    goto quotes_label;
 
 #define COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg)            \
   if (ctx->starting_new_arg) {                                                 \
@@ -66,7 +66,7 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
     switch (*c) {
-      HANDLE_QUOTES_AND_ESCAPES(ctx, c, handle_other_char);
+      HANDLE_QUOTES_AND_ESCAPES(ctx, c, handle_other_char, handle_other_char);
     case ';':
       if (char_escaped) {
         goto handle_other_char;
@@ -147,10 +147,15 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
       return EXIT_FAILURE;
     }
   }
+  // printf("cmdc=%lu\n", *cmdc);
+  // for (size_t i = 0; i < *cmdc; i++) {
+  //   printf("cmd %lu argc=%lu\n", i, (*argcv)->value[i]);
+  // }
+  // printf("---   done calculation\n");
   return EXIT_SUCCESS;
 }
 
-char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
+char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
                       enum COMMAND_SEPARATOR cmd_separators[cmdc]) {
   size_t total_args = 0;
   for (size_t i = 0; i < cmdc; i++) {
@@ -182,7 +187,7 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
     const bool char_escaped = ctx->next_char_escaped || ctx->in_single_quotes
                               || ctx->in_double_quotes;
     switch (*c) {
-      HANDLE_QUOTES_AND_ESCAPES(ctx, c, copy_char);
+      HANDLE_QUOTES_AND_ESCAPES(ctx, c, copy_char, handle_quotes);
     case ';':
       if (char_escaped) {
         goto copy_char;
@@ -202,10 +207,12 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
       cmd_separators[cmd_idx] = CMD_SEP_BGND;
       goto separate_command;
     separate_command:
+      ctx->starting_new_arg = true;  // to ensure the previous arg is flushed
       COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+      argcv[cmd_idx] = arg_idx - 1;
       cmd_idx++;
       arg_idx = 0;
-      ctx->starting_new_arg = true;
+      ctx->starting_new_arg = true;  // COPY_PREVIOUS_ARG resets to false
       ctx->starting_new_cmd = true;
       break;
     case '~':
@@ -242,7 +249,9 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
         memcpy(variable_name, c + variable_start_offset, variable_name_length);
         variable_name[variable_name_length] = '\0';
         char *variable_value = get_variable_value(variable_name);
-        COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+        if (strlen(variable_value) > 0) {
+          COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+        }
         for (char *v = variable_value; *v != '\0'; v++) {
           push_back_char(&current_arg, *v);
         }
@@ -260,6 +269,9 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
       // first unquoted space
       ctx->starting_new_arg = true;
       break;
+    handle_quotes:
+      COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg)
+      break;
     default:
     copy_char:
       COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg)
@@ -271,8 +283,16 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
   // ensure final arg is also NULL-terminated
   if (!ctx->starting_new_cmd) {
     push_back_char(&current_arg, '\0');
-    cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);
   }
+  if (char_vec_size(current_arg) > 0) {
+    char *current_arg_value = strdup(current_arg->value);
+    if (arg_idx == 0) {
+      cmdv[cmd_idx - 1][arg_idx] = current_arg_value;
+    } else {
+      cmdv[cmd_idx][arg_idx - 1] = current_arg_value;
+    }
+  }
+  argcv[cmd_idx] = arg_idx;
   if (current_arg != NULL) {
     free(current_arg);
   }
@@ -286,6 +306,10 @@ char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
   //                     : sep == CMD_SEP_SQTL ? "sqtl"
   //                     : sep == CMD_SEP_NONE ? "none"
   //                                           : "unknown");
+  // }
+
+  // for (size_t i = 0; i < cmdc; i++) {
+  //   printf("cmd %lu argc=%lu\n", i, argcv[i]);
   // }
   return cmdv;
 }

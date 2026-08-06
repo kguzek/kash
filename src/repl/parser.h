@@ -34,7 +34,7 @@ struct cmd_parse_ctx {
  * command after a semicolon or pipe) */
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argv,
                    struct cmd_parse_ctx *ctx_out);
-char ***allocate_cmdv(size_t cmdc, const size_t argcv[cmdc], char *input,
+char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
                       enum COMMAND_SEPARATOR cmd_separators[cmdc]);
 int handle_redirection(char *input, char *redirection);
 static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx);
