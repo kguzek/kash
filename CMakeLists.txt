@@ -4,6 +4,20 @@ project(kash VERSION 1.0.0)
 
 find_package(Git QUIET)
 
+option(KASH_STATIC_READLINE "Statically link GNU readline (release builds)" OFF)
+
+if(KASH_STATIC_READLINE)
+  find_path(READLINE_INCLUDE_DIR readline/readline.h
+    HINTS /opt/homebrew/opt/readline/include /usr/local/opt/readline/include)
+  find_library(READLINE_LIBRARY NAMES libreadline.a readline
+    HINTS /opt/homebrew/opt/readline/lib /usr/local/opt/readline/lib)
+  if(APPLE)
+    find_library(READLINE_NCURSES_LIBRARY NAMES ncurses)
+  else()
+    find_library(READLINE_NCURSES_LIBRARY NAMES libtinfo.a libncurses.a)
+  endif()
+endif()
+
 if(GIT_FOUND)
   execute_process(
     COMMAND ${GIT_EXECUTABLE} describe --tags --exact-match
@@ -47,7 +61,14 @@ add_executable(kash ${SOURCE_FILES})
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-target_link_libraries(kash PRIVATE readline m)
+if(KASH_STATIC_READLINE)
+  target_include_directories(kash PRIVATE ${READLINE_INCLUDE_DIR})
+  target_link_libraries(kash PRIVATE ${READLINE_LIBRARY} ${READLINE_NCURSES_LIBRARY})
+else()
+  target_link_libraries(kash PRIVATE readline)
+endif()
+
+target_link_libraries(kash PRIVATE m)
 target_compile_definitions(kash PRIVATE
   PROGRAM_VERSION="${GIT_VERSION}"
 )

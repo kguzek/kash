@@ -53,4 +53,5 @@ Mkfile.old
 dkms.conf
 
 build
+dist
 vcpkg_installed
