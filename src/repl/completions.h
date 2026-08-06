@@ -46,6 +46,7 @@ static int populate_spec_completions(struct string_vec **completions,
  * part is used for searching. Otherwise, the current working directory is used.
  */
 static int populate_filename_completions(struct string_vec **filenames,
-                                         const char *current_token);
+                                         const char *current_token,
+                                         bool executable_only);
 
 #endif  // SRC_REPL_COMPLETIONS_H_

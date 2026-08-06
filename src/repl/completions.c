@@ -148,6 +148,7 @@ int autocomplete(int count, int key) {
 static int populate_command_completions(struct string_vec **completions,
                                         const char *cmd) {
   populate_builtin_completions(completions, cmd);
+  populate_filename_completions(completions, cmd, true);
   return populate_external_completions(completions, cmd);
 }
 
@@ -160,7 +161,7 @@ static int populate_argument_completions(struct string_vec **completions,
       populate_registered_completion_specs(cmd, &spec_paths);
   if (spec_paths_size == 0) {
     // fallback to filename completions
-    return populate_filename_completions(completions, current_token);
+    return populate_filename_completions(completions, current_token, false);
   } else {
     int exit_code = populate_spec_completions(completions, spec_paths, cmd,
                                               current_token, previous_token);
@@ -290,7 +291,8 @@ static int populate_external_completions(struct string_vec **externals,
 }
 
 static int populate_filename_completions(struct string_vec **filenames,
-                                         const char *current_token) {
+                                         const char *current_token,
+                                         bool executable_only) {
   DIR *d;
   struct dirent *dir;
   const char *filename_prefix = strrchr(current_token, '/');
@@ -337,6 +339,9 @@ static int populate_filename_completions(struct string_vec **filenames,
             snprintf(filename, path_len, is_dir ? "%s/%s/" : "%s/%s", dir_path,
                      dir->d_name);
           }
+        }
+        if (executable_only && !is_dir && access(filename, X_OK) != 0) {
+          continue;
         }
         push_back_string_unique(filenames, filename);
       }
