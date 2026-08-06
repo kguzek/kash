@@ -1,0 +1,125 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.checkReleasedVersion.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Configure git
+        run: |
+          git config user.name "semantic-release-bot"
+          git config user.email "semantic-release-bot@users.noreply.github.com"
+
+      - name: Install semantic-release
+        run: |
+          npm install --global \
+            semantic-release@25 \
+            @semantic-release/exec@7 \
+            @semantic-release/git@11 \
+            @semantic-release/github@12 \
+            conventional-changelog-conventionalcommits@10
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release
+
+      - name: Check released version
+        id: checkReleasedVersion
+        run: |
+          version="$(cat .kash-released-version 2>/dev/null)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build-${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    needs: release
+    if: ${{ needs.release.outputs.version != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+          - os: linux
+            arch: arm64
+            runner: ubuntu-22.04-arm
+          - os: darwin
+            arch: arm64
+            runner: macos-latest
+          - os: darwin
+            arch: amd64
+            runner: macos-26-intel
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          case "${{ matrix.os }}" in
+            linux) sudo apt-get update && sudo apt-get install -y libreadline-dev ;;
+            darwin) brew install readline ;;
+          esac
+
+      - name: Configure
+        run: cmake -B build -S . -DKASH_STATIC_READLINE=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Verify version
+        run: ./build/kash --version
+
+      - name: Package tarball
+        run: |
+          mkdir -p dist/pkg
+          cp build/kash dist/pkg/kash
+          cp LICENSE dist/pkg/LICENSE
+          cp README.md dist/pkg/README.md
+          tar -C dist/pkg -czf "dist/kash-${{ needs.release.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" .
+
+      - name: Wait for release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for i in $(seq 1 60); do
+            if gh release view "${{ needs.release.outputs.version }}" >/dev/null 2>&1; then
+              echo "release ${{ needs.release.outputs.version }} exists"
+              exit 0
+            fi
+            echo "waiting for release ${{ needs.release.outputs.version }} ($i/60)..."
+            sleep 5
+          done
+          echo "release ${{ needs.release.outputs.version }} not created within 5 minutes" >&2
+          exit 1
+
+      - name: Upload tarball to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.release.outputs.version }}" \
+            "dist/kash-${{ needs.release.outputs.version }}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz" \
+            --clobber
