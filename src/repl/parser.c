@@ -2,6 +2,7 @@
 
 #include "src/repl/parser.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 #include "src/lib/path.h"
 #include "src/lib/variables.h"
 #include "src/lib/vector.h"
+#include "src/repl/io.h"
 
 static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
   if (ctx->in_single_quotes || ctx->next_char_escaped) {
@@ -345,11 +347,19 @@ int handle_redirection(char *input, char *redirection) {
   while (*redirection == ' ') {
     redirection++;
   }
+  const char *redirect_repr = file_mode[0] == 'a' ? ">>" : ">";
   if (*redirection == '\0') {
-    fprintf(stderr, "No file specified for redirection\n");
+    fprintf(stderr, "%s: %s: missing redirection target\n", PROGRAM_NAME,
+            redirect_repr);
     return EXIT_FAILURE;
   }
-  freopen(redirection, file_mode, output_file);
+  FILE *file = freopen(redirection, file_mode, output_file);
+  if (file == NULL) {
+    fprintf(stderr, "%s: %s%s: %s\n", PROGRAM_NAME, redirect_repr, redirection,
+            strerror(errno));
+    reset_output();
+    return EXIT_FAILURE;
+  }
   return EXIT_SUCCESS;
 }
 
