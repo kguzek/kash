@@ -5,12 +5,14 @@
 #include <string.h>
 
 #include "src/lib/error_handling.h"
+#include "src/lib/variables.h"
 #include "src/lib/version.h"
 #include "src/repl/shell.h"
 
 int main(int argc, char *argv[]) {
   // flush after every printf
   setbuf(stdout, NULL);
+  populate_shell_variables();
   if (argc < 2) {
     return loop();
   }
