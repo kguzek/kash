@@ -12,7 +12,6 @@
 #include "src/lib/vector.h"
 
 static struct job_vec *jobs = NULL;
-static const size_t STATUS_MAX_WIDTH = 24;
 
 int define_job(pid_t pid, const char *cmd) {
   struct job_definition *job = malloc(sizeof(struct job_definition));

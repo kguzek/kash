@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+#define STATUS_MAX_WIDTH 24
+
 enum JOB_STATUS {
   JOB_STATUS_RUNNING,
   JOB_STATUS_DONE,
