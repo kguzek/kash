@@ -56,11 +56,6 @@ int loop() {
 }
 
 int process_input(char *input) {
-  char *redirection = strstr(input, ">");
-  int redirection_result = handle_redirection(input, redirection);
-  if (redirection_result != EXIT_SUCCESS) {
-    return redirection_result;
-  }
   size_t cmdc = 0;
   struct size_t_vec *argc_vec = NULL;
   int function_result = push_back_size_t(&argc_vec, 0);
@@ -78,7 +73,9 @@ int process_input(char *input) {
   }
   enum COMMAND_SEPARATOR cmd_separators[cmdc];
   size_t *argcv = argc_vec->value;
-  char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
+  struct output_redirection_vec *cmd_output_redirections[cmdc];
+  char ***cmdv = allocate_cmdv(&cmdc, argcv, input, cmd_separators,
+                               cmd_output_redirections);
   if (cmdv == NULL) {
     free(argc_vec);
     return EXIT_FAILURE;
@@ -92,8 +89,6 @@ int process_input(char *input) {
   }
   free(cmdv);
   free(argc_vec);
-  if (redirection != NULL) {
-    reset_output();
-  }
+  reset_output();  // TODO: only if redirecting
   return function_result;
 }

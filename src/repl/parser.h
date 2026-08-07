@@ -5,6 +5,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "src/lib/vector.h"
 
@@ -16,12 +17,19 @@ enum COMMAND_SEPARATOR {
   // TODO(kguzek): add logical operators, e.g. '&&', '||'
 };
 
+enum OUTPUT_REDIRECTION_STAGE {
+  OUT_STAGE_NONE,
+  OUT_STAGE_TARGET_PENDING,
+  OUT_STAGE_TARGET_PARSED,
+};
+
 struct cmd_parse_ctx {
   bool in_single_quotes;
   bool in_double_quotes;
   bool next_char_escaped;
   bool starting_new_arg;
   bool starting_new_cmd;
+  enum OUTPUT_REDIRECTION_STAGE output_redirection_stage;
 };
 
 /** Calculates the number of commands in the input string and the number of
@@ -35,8 +43,10 @@ struct cmd_parse_ctx {
  * command after a semicolon or pipe) */
 int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argv,
                    struct cmd_parse_ctx *ctx_out);
-char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
-                      enum COMMAND_SEPARATOR cmd_separators[cmdc]);
+char ***
+allocate_cmdv(size_t *cmdc, size_t argcv[*cmdc], char *input,
+              enum COMMAND_SEPARATOR cmd_separators[*cmdc],
+              struct output_redirection_vec *cmd_output_redirections[*cmdc]);
 int handle_redirection(char *input, char *redirection);
 static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx);
 static const bool is_escapable_in_double_quotes(const char c);

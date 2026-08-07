@@ -4,10 +4,22 @@
 #define SRC_REPL_IO_H_
 
 #include <stddef.h>
+#include <stdio.h>
 
 int prepare_input();
 size_t collect_input(char **input);
 int interrupt_input();
 int reset_output();
+
+enum OUTPUT_REDIRECTION_TYPE {
+  OUT_TYPE_WRITE,
+  OUT_TYPE_APPND,
+};
+
+struct output_redirection {
+  char *output_file;
+  enum OUTPUT_REDIRECTION_TYPE type;
+  char *output_target;
+};
 
 #endif  // SRC_REPL_IO_H_
