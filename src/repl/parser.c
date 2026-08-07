@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "src/lib/config.h"
+#include "src/lib/error_handling.h"
 #include "src/lib/path.h"
 #include "src/lib/variables.h"
 #include "src/lib/vector.h"
@@ -44,16 +45,45 @@ static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
     ctx->in_double_quotes = !(ctx->in_double_quotes);                          \
     goto quotes_label;
 
+#define FLUSH_OUTPUT_REDIRECTION_TARGET()                                      \
+  struct output_redirection_vec *output_redirections =                         \
+      *cmd_output_redirections[cmd_idx];                                       \
+  int redirection_idx = output_redirection_vec_size(output_redirections) - 1;  \
+  if (redirection_idx < 0) {                                                   \
+    print_error(">: unknown redirection");                                     \
+    free(cmdv);                                                                \
+    return NULL;                                                               \
+  }                                                                            \
+  struct output_redirection *redirection =                                     \
+      output_redirections->value[redirection_idx];                             \
+  push_back_char(&current_arg, '\0');                                          \
+  redirection->output_target = strdup(current_arg->value);                     \
+  free(current_arg);                                                           \
+  current_arg = NULL;                                                          \
+  ctx->output_redirection_stage = OUT_STAGE_NONE;
+
 #define COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg)            \
   if (ctx->starting_new_arg) {                                                 \
-    if (arg_idx > 0) {                                                         \
-      push_back_char(&current_arg, '\0');                                      \
-      cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);                 \
-      free(current_arg);                                                       \
-      current_arg = NULL;                                                      \
+    switch (ctx->output_redirection_stage) {                                   \
+    case OUT_STAGE_NONE:                                                       \
+      if (arg_idx > 0) {                                                       \
+        push_back_char(&current_arg, '\0');                                    \
+        cmdv[cmd_idx][arg_idx - 1] = strdup(current_arg->value);               \
+        free(current_arg);                                                     \
+        current_arg = NULL;                                                    \
+      }                                                                        \
+      arg_idx++;                                                               \
+      break;                                                                   \
+    case OUT_STAGE_TARGET_PENDING:                                             \
+      ctx->output_redirection_stage = OUT_STAGE_TARGET_PARSED;                 \
+      break;                                                                   \
+    case OUT_STAGE_TARGET_PARSED:                                              \
+      FLUSH_OUTPUT_REDIRECTION_TARGET();                                       \
+      break;                                                                   \
+    default:                                                                   \
+      break;                                                                   \
     }                                                                          \
     ctx->starting_new_arg = false;                                             \
-    arg_idx++;                                                                 \
   }                                                                            \
   ctx->starting_new_cmd = false;
 
@@ -169,11 +199,15 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
     perror("malloc");
     return NULL;
   }
+  struct output_redirection_vec *cmd_output_redirections_a[cmdc];
+  struct output_redirection_vec **cmd_output_redirections[cmdc];
   // this sets the first-dimension indices (i.e. cmdv[0..cmdc])
   // as pointers to the appropriate command argv's starting index
   char **argv_storage = (char **)(cmdv + cmdc);
   for (size_t i = 0; i < cmdc; i++) {
     cmd_separators[i] = CMD_SEP_NONE;
+    cmd_output_redirections_a[i] = NULL;
+    cmd_output_redirections[i] = &cmd_output_redirections_a[i];
     cmdv[i] = argv_storage;
     // TODO(kguzek): add +1 if we use NULL terminators in future
     argv_storage += argcv[i];
@@ -216,6 +250,39 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
       arg_idx = 0;
       ctx->starting_new_arg = true;  // COPY_PREVIOUS_ARG resets to false
       ctx->starting_new_cmd = true;
+      break;
+    case '>':
+      if (char_escaped) {
+        goto copy_char;
+      }
+      struct output_redirection *redirection =
+          malloc(sizeof(struct output_redirection));
+      if (*(c + 1) == '>') {
+        redirection->type = OUT_TYPE_APPND;
+        c++;
+      } else {
+        redirection->type = OUT_TYPE_WRITE;
+      }
+      if (ctx->starting_new_arg) {
+        COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+        redirection->output_file = "";
+      } else {
+        if (char_vec_size(current_arg) == 1 && current_arg->value[0] >= '0'
+            && current_arg->value[0] <= '9') {
+          push_back_char(&current_arg, '\0');
+          redirection->output_file = strdup(current_arg->value);
+          free(current_arg);
+          current_arg = NULL;
+        } else {
+          ctx->starting_new_arg = true;
+          COPY_PREVIOUS_ARG(ctx, cmdv, cmd_idx, arg_idx, current_arg);
+          redirection->output_file = "";
+        }
+      }
+      push_back_output_redirection(cmd_output_redirections[cmd_idx],
+                                   redirection);
+      ctx->output_redirection_stage = OUT_STAGE_TARGET_PENDING;
+      ctx->starting_new_arg = true;
       break;
     case '~':
       if (char_escaped) {
@@ -265,10 +332,6 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
       if (char_escaped) {
         goto copy_char;
       }
-      if (ctx->starting_new_arg) {
-        break;  // repeated unquoted space: no-op
-      }
-      // first unquoted space
       ctx->starting_new_arg = true;
       break;
     handle_quotes:
@@ -285,16 +348,23 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
   // ensure final arg is also NULL-terminated
   if (!ctx->starting_new_cmd) {
     push_back_char(&current_arg, '\0');
+    argcv[cmd_idx] = arg_idx - 1;
+  }
+  if (ctx->output_redirection_stage == OUT_STAGE_TARGET_PENDING) {
+    print_error(">: missing redirection target");
+    free(cmdv);
+    return NULL;
   }
   if (char_vec_size(current_arg) > 0) {
     char *current_arg_value = strdup(current_arg->value);
-    if (arg_idx == 0) {
+    if (ctx->output_redirection_stage == OUT_STAGE_TARGET_PARSED) {
+      FLUSH_OUTPUT_REDIRECTION_TARGET();
+    } else if (arg_idx == 0) {
       cmdv[cmd_idx - 1][arg_idx] = current_arg_value;
     } else {
       cmdv[cmd_idx][arg_idx - 1] = current_arg_value;
     }
   }
-  argcv[cmd_idx] = arg_idx;
   if (current_arg != NULL) {
     free(current_arg);
   }
@@ -369,6 +439,7 @@ static void initialize_cmd_parse_ctx(struct cmd_parse_ctx *ctx) {
   ctx->in_single_quotes = false;
   ctx->in_double_quotes = false;
   ctx->next_char_escaped = false;
+  ctx->output_redirection_stage = OUT_STAGE_NONE;
 }
 
 static const bool is_escapable_in_double_quotes(const char c) {

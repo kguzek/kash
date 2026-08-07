@@ -61,6 +61,7 @@ VECTOR_IMPL(char, char);
 PTR_VECTOR_IMPL(string, char *);
 PTR_VECTOR_IMPL(job, struct job_definition *);
 PTR_VECTOR_IMPL(variable, struct variable_definition *);
+PTR_VECTOR_IMPL(output_redirection, struct output_redirection *)
 
 bool string_equal(const char *a, const char *b) {
   return strcmp(a, b) == 0;
@@ -81,6 +82,12 @@ bool job_equal(const struct job_definition *a, const struct job_definition *b) {
 bool variable_equal(const struct variable_definition *a,
                     const struct variable_definition *b) {
   return a->type == b->type && strcmp(a->name, b->name) == 0;
+}
+
+bool output_redirection_equal(const struct output_redirection *a,
+                              const struct output_redirection *b) {
+  return a->type == b->type && strcmp(a->output_file, b->output_file) == 0
+         && strcmp(a->output_target, b->output_target) == 0;
 }
 
 size_t string_pair_vec_size(const struct string_pair_vec *vec) {
