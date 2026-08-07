@@ -48,7 +48,8 @@ jobs:
       - name: Check released version
         id: checkReleasedVersion
         run: |
-          version="$(cat .kash-released-version 2>/dev/null)"
+          touch .kash-released-version
+          version="$(cat .kash-released-version)"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   build:
@@ -76,6 +77,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ needs.release.outputs.version }} # checks out the newly-pushed tag
 
       - name: Install dependencies
         run: |
