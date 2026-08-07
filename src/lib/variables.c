@@ -17,15 +17,11 @@ int declare_variable(const char *command_name, const char *type_option,
   // command_name,
   //         type_option);
   enum VARIABLE_TYPE var_type = VAR_TYPE_STRING;
-  struct variable_definition *variable =
-      malloc(sizeof(struct variable_definition));
-  variable->type = var_type;
   char *name = strdup(declaration);
   char *value = strchr(name, '=');
   if (value == NULL) {
     fprintf(stderr, "%s: %s: invalid variable declaration '%s'\n", PROGRAM_NAME,
             command_name, declaration);
-    free(variable);
     return EXIT_FAILURE;
   }
   *(value++) = '\0';
@@ -33,11 +29,9 @@ int declare_variable(const char *command_name, const char *type_option,
     // tests require this exact error format
     fprintf(stderr, "%s: `%s': not a valid identifier\n", command_name,
             declaration);
-    free(variable);
     return EXIT_FAILURE;
   }
-  variable->name = name;
-  variable->value = value;
+  struct variable_definition *variable = define_variable(name, var_type, value);
   return upsert_variable(variable);
 }
 
@@ -64,8 +58,24 @@ char *get_variable_value(const char *variable_name) {
   return "";
 }
 
+int populate_shell_variables() {
+  struct variable_definition *kash_version =
+      define_variable("KASH_VERSION", VAR_TYPE_STRING, PROGRAM_VERSION);
+  return push_back_variable(&variables, kash_version);
+}
+
 bool is_valid_variable_char(const char c) {
   return is_letter_or_underscore(c) || is_digit(c);
+}
+
+static struct variable_definition *
+define_variable(char *name, const enum VARIABLE_TYPE type, char *value) {
+  struct variable_definition *variable =
+      malloc(sizeof(struct variable_definition));
+  variable->type = type;
+  variable->name = name;
+  variable->value = value;
+  return variable;
 }
 
 static int upsert_variable(struct variable_definition *variable) {
