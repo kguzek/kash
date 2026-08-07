@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "src/lib/config.h"
@@ -21,7 +22,10 @@ char *get_full_path(const char *command) {
   char full_path[MAX_PATH_SIZE];
   while (path_dir) {
     snprintf(full_path, sizeof(full_path), "%s/%s", path_dir, command);
-    if (access(full_path, X_OK) == 0) {  // checks if executable
+    struct stat st;
+    if (access(full_path, X_OK) == 0 &&  // is executable
+        stat(full_path, &st) == 0 &&     // resolves symlinks (recursively)
+        S_ISREG(st.st_mode)) {           // and is a regular file, not a dir
       free(path_copy);
       return strdup(full_path);
     }
