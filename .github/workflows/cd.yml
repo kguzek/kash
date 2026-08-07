@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release
@@ -14,6 +14,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     outputs:
       version: ${{ steps.checkReleasedVersion.outputs.version }}
     steps:
@@ -37,8 +41,7 @@ jobs:
             semantic-release@25 \
             @semantic-release/exec@7 \
             @semantic-release/git@11 \
-            @semantic-release/github@12 \
-            conventional-changelog-conventionalcommits@10
+            conventional-changelog-conventionalcommits@9.3
 
       - name: Release
         env:
@@ -55,6 +58,8 @@ jobs:
   build:
     name: build-${{ matrix.os }}-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
     needs: release
     if: ${{ needs.release.outputs.version != '' }}
     strategy:
