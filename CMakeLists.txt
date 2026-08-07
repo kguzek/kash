@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(kash VERSION 1.2.0)
+project(kash VERSION 1.2.1)
 
 find_package(Git QUIET)
 
