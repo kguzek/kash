@@ -52,6 +52,9 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# Python bytecode
+__pycache__
+
 build
 dist
 vcpkg_installed
