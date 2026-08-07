@@ -73,7 +73,7 @@ int process_input(char *input) {
   }
   enum COMMAND_SEPARATOR cmd_separators[cmdc];
   size_t *argcv = argc_vec->value;
-  char ***cmdv = allocate_cmdv(cmdc, argcv, input, cmd_separators);
+  char ***cmdv = allocate_cmdv(&cmdc, argcv, input, cmd_separators);
   if (cmdv == NULL) {
     free(argc_vec);
     return EXIT_FAILURE;

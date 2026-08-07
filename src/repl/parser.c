@@ -187,9 +187,10 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
   return EXIT_SUCCESS;
 }
 
-char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
-                      enum COMMAND_SEPARATOR cmd_separators[cmdc]) {
+char ***allocate_cmdv(size_t *cmdc_ptr, size_t argcv[*cmdc_ptr], char *input,
+                      enum COMMAND_SEPARATOR cmd_separators[*cmdc_ptr]) {
   size_t total_args = 0;
+  size_t cmdc = *cmdc_ptr;
   for (size_t i = 0; i < cmdc; i++) {
     // TODO(kguzek): add +1 if we use NULL terminators in future
     total_args += argcv[i];
@@ -240,6 +241,10 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
       if (char_escaped) {
         goto copy_char;
       }
+      if (ctx->output_redirection_stage == OUT_STAGE_TARGET_PENDING) {
+        (*cmdc_ptr)--;
+        goto copy_char;
+      }
       cmd_separators[cmd_idx] = CMD_SEP_BGND;
       goto separate_command;
     separate_command:
@@ -279,6 +284,7 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
           redirection->output_file = "";
         }
       }
+      arg_idx--;
       push_back_output_redirection(cmd_output_redirections[cmd_idx],
                                    redirection);
       ctx->output_redirection_stage = OUT_STAGE_TARGET_PENDING;
@@ -348,7 +354,7 @@ char ***allocate_cmdv(size_t cmdc, size_t argcv[cmdc], char *input,
   // ensure final arg is also NULL-terminated
   if (!ctx->starting_new_cmd) {
     push_back_char(&current_arg, '\0');
-    argcv[cmd_idx] = arg_idx - 1;
+    argcv[cmd_idx] = arg_idx;
   }
   if (ctx->output_redirection_stage == OUT_STAGE_TARGET_PENDING) {
     print_error(">: missing redirection target");
