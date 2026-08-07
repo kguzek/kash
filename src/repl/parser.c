@@ -47,7 +47,7 @@ static bool is_backslash_escaped(struct cmd_parse_ctx *ctx, const char *c) {
 
 #define FLUSH_OUTPUT_REDIRECTION_TARGET()                                      \
   struct output_redirection_vec *output_redirections =                         \
-      *cmd_output_redirections[cmd_idx];                                       \
+      cmd_output_redirections[cmd_idx];                                        \
   int redirection_idx = output_redirection_vec_size(output_redirections) - 1;  \
   if (redirection_idx < 0) {                                                   \
     print_error(">: unknown redirection");                                     \
@@ -187,8 +187,10 @@ int calculate_cmdc(const char *input, size_t *cmdc, struct size_t_vec **argcv,
   return EXIT_SUCCESS;
 }
 
-char ***allocate_cmdv(size_t *cmdc_ptr, size_t argcv[*cmdc_ptr], char *input,
-                      enum COMMAND_SEPARATOR cmd_separators[*cmdc_ptr]) {
+char ***allocate_cmdv(
+    size_t *cmdc_ptr, size_t argcv[*cmdc_ptr], char *input,
+    enum COMMAND_SEPARATOR cmd_separators[*cmdc_ptr],
+    struct output_redirection_vec *cmd_output_redirections[*cmdc_ptr]) {
   size_t total_args = 0;
   size_t cmdc = *cmdc_ptr;
   for (size_t i = 0; i < cmdc; i++) {
@@ -200,15 +202,12 @@ char ***allocate_cmdv(size_t *cmdc_ptr, size_t argcv[*cmdc_ptr], char *input,
     perror("malloc");
     return NULL;
   }
-  struct output_redirection_vec *cmd_output_redirections_a[cmdc];
-  struct output_redirection_vec **cmd_output_redirections[cmdc];
   // this sets the first-dimension indices (i.e. cmdv[0..cmdc])
   // as pointers to the appropriate command argv's starting index
   char **argv_storage = (char **)(cmdv + cmdc);
   for (size_t i = 0; i < cmdc; i++) {
     cmd_separators[i] = CMD_SEP_NONE;
-    cmd_output_redirections_a[i] = NULL;
-    cmd_output_redirections[i] = &cmd_output_redirections_a[i];
+    cmd_output_redirections[i] = NULL;
     cmdv[i] = argv_storage;
     // TODO(kguzek): add +1 if we use NULL terminators in future
     argv_storage += argcv[i];
@@ -285,7 +284,7 @@ char ***allocate_cmdv(size_t *cmdc_ptr, size_t argcv[*cmdc_ptr], char *input,
         }
       }
       arg_idx--;
-      push_back_output_redirection(cmd_output_redirections[cmd_idx],
+      push_back_output_redirection(cmd_output_redirections + cmd_idx,
                                    redirection);
       ctx->output_redirection_stage = OUT_STAGE_TARGET_PENDING;
       ctx->starting_new_arg = true;
