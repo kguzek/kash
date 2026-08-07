@@ -57,5 +57,8 @@ jobs:
           name: build
           path: build/
 
+      - name: Make binary executable
+        run: chmod +x build/kash
+
       - name: Run integration tests
         run: python -m pytest
